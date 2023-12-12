@@ -5,8 +5,9 @@ from torch.utils.data import DataLoader, Dataset
 def L1_MAD_weighted(x_pert,x_orig):
     
     MAD = median_abs_deviation(x_orig.cpu().numpy(),axis = 0)
+    MAD[0] = 1.0
     diff = torch.abs(x_orig - x_pert)
-    return (diff / torch.tensor(MAD).cuda()).sum(dim = 1).sum()
+    return (diff / torch.tensor(MAD).cuda()).sum(dim = 1)
 
 def adv_loss(lamb,
             logits,
@@ -20,26 +21,28 @@ def adv_loss(lamb,
     
     if method == 'L1_MAD':
         dist_loss = L1_MAD_weighted(x_pert,x_orig)
+    
     elif method == 'Euclid':
         if weighted:
             dist_loss = Euclidean_dist(x_pert,x_orig,weighted=True)
         else:
             dist_loss = Euclidean_dist(x_pert,x_orig,weighted=False)
+    
     else:
-        raise ValueError("Method can only be L1_MAD or L2_unwghtd")
+        raise ValueError("Method can only be L1_MAD or Euclid")
 
-    return sq_diff.mean() + dist_loss
+    return (sq_diff + dist_loss).mean()
 
 def Euclidean_dist(X_pert,X_orig,weighted = False):
 
     loss = (X_orig - X_pert) ** 2
      
     if not weighted:
-        loss = loss.sum(dim = 1).mean()
+        loss = loss.sum(dim = 1)
     
     else:
-        loss = loss / X_orig.std(dim = 0)
-        loss = loss.sum(dim = 1).mean()
+        loss = torch.div(loss, X_orig.std(dim = 0))
+        loss = loss.sum(dim = 1)
 
     return loss
 
@@ -55,12 +58,14 @@ class DenseModel(torch.nn.Module):
 
                               torch.nn.Linear(
                                               in_features=self.inputShape,
-                                              out_features=20
+                                              out_features=20,
+                                              bias=True
                                               ),
                               torch.nn.ReLU(),
                               torch.nn.Linear(
                                               in_features=20,
-                                              out_features=20
+                                              out_features=20,
+                                              bias = True
                                               ),
                               torch.nn.ReLU(),
                               torch.nn.Linear(
@@ -77,7 +82,7 @@ class DenseModel(torch.nn.Module):
 class CustomDataset(Dataset):
     def __init__(self, data):
         self.data = data
-        self.X = self.data[:, :-1]  # All columns except the last one as input
+        self.X = self.data[:, :-1]
         self.Y = self.data[:, -1]
 
     def __len__(self):

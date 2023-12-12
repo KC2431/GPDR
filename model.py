@@ -24,21 +24,21 @@ if __name__ == '__main__':
                                                           shuffle = True
                                                           )
 
-    X_train = torch.tensor(scaler.fit_transform(X_train)).to(device = 'cuda:0',dtype = torch.float32)
-    X_test = torch.tensor(scaler.transform(X_test)).to(device = 'cuda:0',dtype = torch.float32)
+    X_train = torch.tensor(X_train).to(device = 'cuda:0',dtype = torch.float32)
+    X_test = torch.tensor(X_test).to(device = 'cuda:0',dtype = torch.float32)
     y_train = torch.tensor(y_train).to(device = 'cuda:0',dtype = torch.float32)
     y_test = torch.tensor(y_test).to(device = 'cuda:0',dtype = torch.float32)
 
     training_data = torch.cat((X_train, torch.reshape(y_train,shape=(-1,1))), dim = 1)
     training_data = CustomDataset(training_data)
-    data_loader = DataLoader(training_data, batch_size=64, shuffle=True)
+    data_loader = DataLoader(training_data, batch_size=32, shuffle=True)
 
     train = True
     loss_fn = torch.nn.MSELoss()
     
     if train:
 
-        num_epochs = 1000
+        num_epochs = 100
         training_bar = tqdm(range(num_epochs))
 
         model = DenseModel(X_train.shape[1],1).to(device='cuda:0')
@@ -78,7 +78,7 @@ if __name__ == '__main__':
     model.eval()
     adv_optimizer = torch.optim.Adam([X_pert],lr = 1e-2)
     lamb = 1e-3
-    num_iters = 6000
+    num_iters = 3000
     pert_bar = tqdm(range(num_iters))
 
     for param in model.parameters():
@@ -95,7 +95,7 @@ if __name__ == '__main__':
                         y_target,
                         X_train,
                         X_pert,
-                        'Euclid',
+                        'L1_MAD',
                         False
                         )
         
@@ -113,9 +113,6 @@ if __name__ == '__main__':
 
         X_pert_pred = (X_pert_pred - X_pert_pred.mean()) / (X_pert_pred.max() - X_pert_pred.min())
         X_train_pred = (X_train_pred - X_train_pred.mean()) / (X_train_pred.max() - X_train_pred.min())
-    
-    X_pert = scaler.inverse_transform(X_pert.cpu().numpy()) 
-    X_train = scaler.inverse_transform(X_train.cpu().numpy())
     
     print(X_train)
     print(X_pert)

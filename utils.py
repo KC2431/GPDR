@@ -59,19 +59,24 @@ class DenseModel(torch.nn.Module):
                               torch.nn.Linear(
                                               in_features=self.inputShape,
                                               out_features=20,
-                                              bias=True
                                               ),
                               torch.nn.ReLU(),
                               torch.nn.Linear(
                                               in_features=20,
                                               out_features=20,
-                                              bias = True
                                               ),
                               torch.nn.ReLU(),
                               torch.nn.Linear(
                                               in_features=20,
-                                              out_features=self.outputShape
+                                              out_features=20,
                                               ),
+                              torch.nn.ReLU(),
+                              torch.nn.Linear(
+                                              in_features=20,
+                                              out_features=self.outputShape,
+                                              ),
+
+                              torch.nn.Sigmoid()
                      
                      )
 
@@ -80,13 +85,13 @@ class DenseModel(torch.nn.Module):
         return self.model(input)
 
 class CustomDataset(Dataset):
-    def __init__(self, data):
-        self.data = data
-        self.X = self.data[:, :-1]
-        self.Y = self.data[:, -1]
+    def __init__(self, X, Y):
+        
+        self.X  = X
+        self.Y = Y
 
     def __len__(self):
-        return len(self.data)
+        return self.X.shape[0]
 
     def __getitem__(self, idx):
         return self.X[idx], self.Y[idx]

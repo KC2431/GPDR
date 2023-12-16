@@ -5,19 +5,18 @@ from torch.utils.data import DataLoader, Dataset
 def L1_MAD_weighted(x_pert,x_orig):
     
     MAD = median_abs_deviation(x_orig.cpu().numpy(),axis = 0)
-    MAD[0] = 1.0
     diff = torch.abs(x_orig - x_pert)
     return (diff / torch.tensor(MAD).cuda()).sum(dim = 1)
 
 def adv_loss(lamb,
-            logits,
+            adv_logits,
             y_target,
             x_orig,
             x_pert,
             method,
             weighted):
 
-    sq_diff = lamb * (logits - y_target) ** 2
+    sq_diff = lamb * (adv_logits - y_target) ** 2
     
     if method == 'L1_MAD':
         dist_loss = L1_MAD_weighted(x_pert,x_orig)

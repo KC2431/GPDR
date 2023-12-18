@@ -86,14 +86,14 @@ if __name__ == '__main__':
                                         y_test.cpu().numpy(),
                                         y_test_pred.cpu().numpy()
                                       )
-            
+            """
             sns.heatmap(cm,annot=True)
             plt.xlabel('Predicted')
             plt.ylabel('Actual')
-
+            
             plt.title("Confusion matrix for PIMA dataset for test set")
             plt.show()
-
+            """
             print(f'The accuracy on test set is {accu_score*100:.2f}%')
 
     entire_X = torch.cat((X_train,X_test),dim=0)
@@ -104,9 +104,9 @@ if __name__ == '__main__':
     y_target.add_(0.5)
 
     model.eval()
-    adv_optimizer = torch.optim.Adam([X_pert],lr = 1e-3)
-    lamb = 3e-3
-    num_iters = 2100
+    adv_optimizer = torch.optim.Adam([X_pert],lr = 2e-3)
+    lamb = 5e-3
+    num_iters = 2800
     
     for param in model.parameters():
         param.requires_grad = False
@@ -117,7 +117,7 @@ if __name__ == '__main__':
     for i in pert_bar:
 
         if i % 100 == 0:
-            lamb *= 1.8
+            lamb *= 1.7
 
         adv_logits = model(X_pert)
         loss = adv_loss(lamb,

@@ -10,7 +10,7 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
-torch.manual_seed(21)
+torch.manual_seed(19)
 
 # loss functions 
 # ==========================================================================================================================================================
@@ -18,7 +18,6 @@ def L1_MAD_weighted(x_pert,x_orig):
     
     MAD = median_abs_deviation(x_orig.cpu().numpy(),axis = 0)
     diff = torch.abs(x_orig - x_pert)
-    print(torch.tensor(MAD).shape)
     return (diff / torch.tensor(MAD).cuda()).sum(dim = 1)
 
 
@@ -40,8 +39,7 @@ def adv_loss(lamb,
             y_target,
             x_orig,
             x_pert,
-            method,
-            weighted):
+            method):
 
     sq_diff = lamb * (adv_logits - y_target) ** 2
     
@@ -49,11 +47,8 @@ def adv_loss(lamb,
         dist_loss = L1_MAD_weighted(x_pert,x_orig)
     
     elif method == 'Euclid':
-        if weighted:
-            dist_loss = Euclidean_dist(x_pert,x_orig,weighted=True)
-        else:
-            dist_loss = Euclidean_dist(x_pert,x_orig,weighted=False)
-    
+        dist_loss = Euclidean_dist(x_pert,x_orig,weighted=True)
+        
     else:
         raise ValueError("Method can only be L1_MAD or Euclid")
 
@@ -78,17 +73,16 @@ def get_trained_model(file_name,
     X = data.iloc[:,:-1].values
     Y = data.iloc[:,-1].values
     
-    X_scaled = scaler.fit_transform(X)
-
     test_size = train_test_ratio
-    X_train, X_test, y_train, y_test = train_test_split(X_scaled,
+    X_train, X_test, y_train, y_test = train_test_split(X,
                                                           Y,
                                                           test_size = test_size,
                                                           shuffle = shuffle
                                                           )
 
-    X_train = torch.tensor(X_train).to(device = 'cuda:0',dtype = torch.float32)
-    X_test = torch.tensor(X_test).to(device = 'cuda:0',dtype = torch.float32)
+    
+    X_train = torch.tensor(scaler.fit_transform(X_train)).to(device = 'cuda:0',dtype = torch.float32)
+    X_test = torch.tensor(scaler.transform(X_test)).to(device = 'cuda:0',dtype = torch.float32)
     y_train = torch.tensor(y_train).to(device = 'cuda:0',dtype = torch.float32)
     y_test = torch.tensor(y_test).to(device = 'cuda:0',dtype = torch.float32)
 
@@ -97,7 +91,7 @@ def get_trained_model(file_name,
 
     if train:
 
-        num_epochs = 200
+        num_epochs = num_epochs
         loss_fn = torch.nn.BCELoss()
 
         print('Training the model.')

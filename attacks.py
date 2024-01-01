@@ -67,7 +67,9 @@ def L1_MAD_attack(file_name,
         adv_optimizer.zero_grad()
         loss.backward()
         adv_optimizer.step()
+
         pert_bar.set_postfix(loss = float(loss)) 
+        
 
     X_pert = X_pert.detach()
 
@@ -81,7 +83,7 @@ def L1_MAD_attack(file_name,
     X_pert_inv_scaled = scaler.inverse_transform(X_pert.cpu().numpy())
 
     print(f'The mean L0 norm for the perturbation is {avg_L0_norm}')
-    pert_data = pd.DataFrame(np.concatenate((np.abs(X_pert_inv_scaled.round(1)), X_pert_pred.cpu().numpy()), axis=1),columns=data.columns)
+    pert_data = pd.DataFrame(np.concatenate((X_pert_inv_scaled.round(3), X_pert_pred.cpu().numpy()), axis=1),columns=data.columns)
     pert_data.to_csv('results.csv',index=False)
     
     print('The Results have been saved as results.csv')
@@ -135,6 +137,8 @@ def SAIF(model,
 
     r = 1
 
+    print(f'Performing attack on the dataset for {num_epochs} epochs')
+
     epochs_bar = tqdm(range(num_epochs))
 
     for epoch in epochs_bar:
@@ -170,7 +174,10 @@ def SAIF(model,
 
             p = p + mu * (v - p)
             s = s + mu * (z - s)
-
+            
+            X_adv = torch.clamp(entire_X + p, 0,1)
+            p = X_adv - entire_X
+            
         epochs_bar.set_postfix(loss = float(loss))
 
     X_adv = entire_X + s*p
@@ -182,7 +189,7 @@ def SAIF(model,
     entire_X = scaler.inverse_transform(entire_X.cpu().detach().numpy())
     
     print(f'The mean L0 norm for the perturbation is {avg_L0_norm}.')
-    X_adv_df = torch.cat((torch.Tensor(X_adv).abs(), X_adv_pred.cpu()), dim = 1)
+    X_adv_df = torch.cat((torch.Tensor(X_adv), X_adv_pred.cpu()), dim = 1)
     pert_data = pd.DataFrame(X_adv_df.detach().numpy(),columns=data.columns)
     pert_data.to_csv('SAIFresults.csv',index=False)    
 

@@ -5,7 +5,6 @@ from sklearn.preprocessing import MinMaxScaler
 from scipy.stats import median_abs_deviation
 from sklearn.metrics import confusion_matrix, accuracy_score
 from sklearn.model_selection import train_test_split
-
 import torch
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
@@ -18,7 +17,7 @@ def L1_MAD_weighted(x_pert,x_orig):
     
     MAD = median_abs_deviation(x_orig.cpu().numpy(),axis = 0)
     diff = torch.abs(x_orig - x_pert)
-    return (diff / torch.tensor(MAD).cuda()).sum(dim = 1)
+    return (diff / torch.tensor(MAD, device=x_orig.device)).sum(dim = 1)
 
 
 def Euclidean_dist(X_pert,X_orig,weighted = False):
@@ -33,6 +32,7 @@ def Euclidean_dist(X_pert,X_orig,weighted = False):
         loss = loss.sum(dim = 1)
 
     return loss
+
 
 def adv_loss(lamb,
             adv_logits,

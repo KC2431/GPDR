@@ -1,13 +1,13 @@
 from utils import *
-
+from attacks import *
 
 if __name__ == '__main__':
 
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-    num_epochs = 100
+    num_epochs = 400
 
     model = get_trained_model(file_name='diabetes.csv',
-                              train=False,
+                              train=True,
                               batch_size=20,
                               shuffle=False,
                               train_test_ratio=0.2,

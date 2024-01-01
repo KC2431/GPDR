@@ -4,7 +4,9 @@ from attacks import *
 if __name__ == '__main__':
 
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-    num_epochs = 400
+    num_epochs = 200
+    file_name = 'diabetes.csv'
+    target = 0.5
 
     model = get_trained_model(file_name='diabetes.csv',
                               train=True,
@@ -18,18 +20,18 @@ if __name__ == '__main__':
     
     loss_fn = torch.nn.BCELoss()
     x_pert_SAIF = SAIF(model = model,
-                       file_name='diabetes.csv',
-                       labels=0.5,
+                       file_name=file_name,
+                       labels=target,
                        loss_fn=loss_fn,
                        device=device,
                        num_epochs=num_epochs)
     
-    X_pert_L1_MAD = L1_MAD_attack(file_name='diabetes.csv',
+    X_pert_L1_MAD = L1_MAD_attack(file_name=file_name,
                                   device=device,
-                                  target=0.5,
-                                  lamb=5e-3,
+                                  target=target,
+                                  lamb=10,
                                   num_iters=num_epochs,
-                                  optim_lr=2e-3,
+                                  optim_lr=1e-2,
                                   model=model)
 
     

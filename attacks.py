@@ -21,6 +21,7 @@ def L1_MAD_attack(file_name,
                   ):
     print('======================================================================')
     print('L1 weighted by MAD attack')
+
     data = pd.read_csv(file_name)
     scaler = MinMaxScaler()
 
@@ -49,8 +50,10 @@ def L1_MAD_attack(file_name,
 
         X_pert.requires_grad = True
 
+        """
         if i % 50 == 0:
             lamb *= 1.7
+        """
 
         adv_logits = model(X_pert)
         loss = adv_loss(lamb=lamb,
@@ -71,13 +74,14 @@ def L1_MAD_attack(file_name,
     with torch.no_grad():
         X_pert_pred = model(X_pert)
     
-    print(torch.norm(torch.round(entire_X - X_pert,decimals = 3),p = 0, dim = 1).mean())
-    
+
+    avg_L0_norm = torch.norm(torch.round(entire_X - X_pert,decimals = 3),p = 0, dim = 1).mean()
+
     entire_X = scaler.inverse_transform(entire_X.cpu().numpy())
     X_pert_inv_scaled = scaler.inverse_transform(X_pert.cpu().numpy())
 
-    print(f'The mean L0 norm for the perturbation is {np.linalg.norm(entire_X.round(1) - X_pert_inv_scaled.round(1),ord=0,axis=1).mean()}')
-    pert_data = pd.DataFrame(np.concatenate((np.abs(X_pert_inv_scaled.round(3)), X_pert_pred.cpu().numpy()), axis=1),columns=data.columns)
+    print(f'The mean L0 norm for the perturbation is {avg_L0_norm}')
+    pert_data = pd.DataFrame(np.concatenate((np.abs(X_pert_inv_scaled.round(1)), X_pert_pred.cpu().numpy()), axis=1),columns=data.columns)
     pert_data.to_csv('results.csv',index=False)
     
     print('The Results have been saved as results.csv')
@@ -118,7 +122,7 @@ def SAIF(model,
     y_target.add_(labels)
 
     out = model(input_clone)
-    loss = loss_fn(out,y_target.reshape(-1,1))
+    loss = -loss_fn(out,y_target.reshape(-1,1))
     loss.backward()
 
     p = -eps * input_clone.grad.sign()
@@ -172,13 +176,12 @@ def SAIF(model,
     X_adv = entire_X + s*p
     X_adv_pred = model(X_adv)
     
-    print(torch.norm(torch.round(entire_X - X_adv,decimals = 3),p = 0, dim = 1).mean())
+    avg_L0_norm = torch.norm(torch.round(entire_X - X_adv,decimals = 3),p = 0, dim = 1).mean()
 
     X_adv = scaler.inverse_transform(X_adv.cpu().numpy())
     entire_X = scaler.inverse_transform(entire_X.cpu().detach().numpy())
     
-    L0norm_mean = np.linalg.norm(entire_X.round(1) - X_adv.round(1),ord=0,axis=1).mean()
-    print(f'The mean L0 norm for the perturbation is {L0norm_mean}.')
+    print(f'The mean L0 norm for the perturbation is {avg_L0_norm}.')
     X_adv_df = torch.cat((torch.Tensor(X_adv).abs(), X_adv_pred.cpu()), dim = 1)
     pert_data = pd.DataFrame(X_adv_df.detach().numpy(),columns=data.columns)
     pert_data.to_csv('SAIFresults.csv',index=False)    

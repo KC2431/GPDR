@@ -50,11 +50,6 @@ def L1_MAD_attack(file_name,
 
         X_pert.requires_grad = True
 
-        """
-        if i % 50 == 0:
-            lamb *= 1.7
-        """
-
         adv_logits = model(X_pert)
         loss = adv_loss(lamb=lamb,
                         adv_logits=adv_logits,
@@ -117,6 +112,10 @@ def SAIF(model,
     entire_X = torch.tensor(entire_X, dtype = torch.float32,device = device)
     entire_Y = torch.tensor(entire_Y, dtype=torch.float32,device = device)
 
+    model.eval()
+    for param in model.parameters():
+        param.requires_grad = False
+
     input_clone = entire_X.clone()
     input_clone.requires_grad = True
 
@@ -138,7 +137,6 @@ def SAIF(model,
     r = 1
 
     print(f'Performing attack on the dataset for {num_epochs} epochs')
-
     epochs_bar = tqdm(range(num_epochs))
 
     for epoch in epochs_bar:
@@ -183,6 +181,9 @@ def SAIF(model,
     X_adv = entire_X + s*p
     X_adv_pred = model(X_adv)
     
+    print(s)
+    print(p)
+
     avg_L0_norm = torch.norm(torch.round(entire_X - X_adv,decimals = 3),p = 0, dim = 1).mean()
 
     X_adv = scaler.inverse_transform(X_adv.cpu().numpy())

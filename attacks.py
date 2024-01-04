@@ -62,11 +62,13 @@ def L1_MAD_attack(file_name,
         adv_optimizer.zero_grad()
         loss.backward()
         adv_optimizer.step()
-
+            
         pert_bar.set_postfix(loss = float(loss)) 
         
 
     X_pert = X_pert.detach()
+    X_pert = torch.where(X_pert > 1, torch.ones_like(X_pert), X_pert)
+    X_pert = torch.where(X_pert < 0, torch.zeros_like(X_pert), X_pert)
 
     with torch.no_grad():
         X_pert_pred = model(X_pert)
@@ -179,11 +181,11 @@ def SAIF(model,
         epochs_bar.set_postfix(loss = float(loss))
 
     X_adv = entire_X + s*p
+    X_adv = torch.where(X_adv > 1, torch.ones_like(X_adv), X_adv)
+    X_adv = torch.where(X_adv < 0, torch.zeros_like(X_adv), X_adv)
+
     X_adv_pred = model(X_adv)
     
-    print(s)
-    print(p)
-
     avg_L0_norm = torch.norm(torch.round(entire_X - X_adv,decimals = 3),p = 0, dim = 1).mean()
 
     X_adv = scaler.inverse_transform(X_adv.cpu().numpy())

@@ -6,10 +6,11 @@ from scipy.stats import median_abs_deviation
 from sklearn.metrics import confusion_matrix, accuracy_score
 from sklearn.model_selection import train_test_split
 import torch
+from torch.nn.functional import relu
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
-torch.manual_seed(19)
+torch.manual_seed(18)
 
 # loss functions 
 # ==========================================================================================================================================================
@@ -54,6 +55,17 @@ def adv_loss(lamb,
 
     return (sq_diff + dist_loss).mean()
 # ==========================================================================================================================================================
+
+def pointIsInConvexHull(points, point):
+    
+    hull = ConvexHull(points)
+    A, b = hull.equations[:, :-1], hull.equations[:, -1:]
+    eps = np.finfo(np.float32).eps
+
+    return contained(point,eps)
+
+def contained(x,eps):
+    return np.all(np.asarray(x) @ A.T + b.T < eps, axis=1)
 
 # Model Training
 # =========================================================================================================================================================

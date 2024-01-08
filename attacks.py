@@ -73,7 +73,6 @@ def L1_MAD_attack(file_name,
     with torch.no_grad():
         X_pert_pred = model(X_pert)
     
-
     avg_L0_norm = torch.norm(torch.round(entire_X - X_pert,decimals = 3),p = 0, dim = 1).mean()
 
     entire_X = scaler.inverse_transform(entire_X.cpu().numpy())
@@ -96,7 +95,7 @@ def SAIF(model,
          device,
          num_epochs,
          targeted = True,
-         k = 2,
+         k = 4,
          eps = 1.0):
 
 

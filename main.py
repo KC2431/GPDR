@@ -4,17 +4,17 @@ from attacks import *
 if __name__ == '__main__':
 
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-    num_epochs = 200
+    num_epochs = 500
     file_name = 'diabetes.csv'
     target = 0.5
 
     model = get_trained_model(file_name='diabetes.csv',
                               train=True,
-                              batch_size=20,
+                              batch_size=10,
                               shuffle=False,
                               train_test_ratio=0.2,
-                              num_epochs=200,
-                              lr=2e-3,
+                              num_epochs=400,
+                              lr=1e-2,
                               weight_decay=1e-3,
                               device=device)
     

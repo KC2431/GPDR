@@ -95,7 +95,7 @@ def SAIF(model,
          device,
          num_epochs,
          targeted = True,
-         k = 4,
+         k = 3,
          eps = 1.0):
 
 

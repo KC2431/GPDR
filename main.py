@@ -1,5 +1,6 @@
 from utils import *
 from attacks import *
+from convex_projection import convex_hull_proj
 
 if __name__ == '__main__':
 
@@ -35,6 +36,12 @@ if __name__ == '__main__':
                                   model=model)
 
     
-    
+    NotInConvexHullData, InConvexHullData = convex_hull_proj(original_data_path='diabetes.csv',
+                                                             adv_data_path='SAIFresults.csv',
+                                                             trained_model_path='trained_model.pt',
+                                                             device=device,
+                                                             lamb=0.9,
+                                                             optim_lr=1e-2,
+                                                             num_iterates=201)    
     
     

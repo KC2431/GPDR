@@ -13,13 +13,22 @@ def get_farthest_points(points, target_points):
     
 
 
-if __name__ == '__main__':
+def convex_hull_proj(
+        original_data_path: str,
+        adv_data_path: str,
+        trained_model_path: str,
+        device: str,
+        lamb: float,
+        optim_lr: float,
+        num_iterates: int
+        ):
+
     from sklearn.preprocessing import MinMaxScaler
     
-    model = torch.load('trained_model.pt')
+    model = torch.load(trained_model_path)
 
-    df = pd.read_csv('diabetes.csv')
-    saif = pd.read_csv('SAIFresults.csv')
+    df = pd.read_csv(original_data_path)
+    saif = pd.read_csv(adv_data_path)
 
     req_cols = ['Pregnancies', 'Glucose', 'BloodPressure', 'SkinThickness', 'Insulin', 'BMI', 'DiabetesPedigreeFunction', 'Age']
 
@@ -37,7 +46,6 @@ if __name__ == '__main__':
     a = pointIsInConvexHull(hull, saif)
     saifNotInConvexHull = saif[~a]
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     points = torch.tensor(df, device=device)
     saif = torch.tensor(saifNotInConvexHull, device=device, dtype = torch.float32)
     
@@ -46,7 +54,7 @@ if __name__ == '__main__':
     
 
     saifClone = saif.clone()
-    lamb = 0.9
+    lamb = lamb
     
     before_projection = model(saif).round().reshape(-1)
 
@@ -58,7 +66,7 @@ if __name__ == '__main__':
     saif.requires_grad = True
     points_optimizer = torch.optim.Adam([saif], lr=1e-2)
 
-    for epoch in range(201):
+    for epoch in range(num_iterates):
         points_optimizer.zero_grad()
         farthest_points = get_farthest_points(points, saif)
         loss = torch.norm(farthest_points - saif, p=1, dim = 1) + lamb * torch.norm(saifClone - saif,p = 1, dim = 1)
@@ -79,6 +87,5 @@ if __name__ == '__main__':
     print(torch.norm(before_projection - after_projection,p = 1))
     print(saif_scaler.inverse_transform(saifClone.cpu().numpy()))
     print(saif_scaler.inverse_transform(saif.detach().cpu().numpy()))
-
-    print(before_projection)
-    print(after_projection)
+    
+    return saifClone, saif

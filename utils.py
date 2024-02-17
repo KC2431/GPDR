@@ -2,11 +2,14 @@ import math
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
+from scipy.spatial import ConvexHull
 from scipy.stats import median_abs_deviation
 from sklearn.metrics import confusion_matrix, accuracy_score
 from sklearn.model_selection import train_test_split
 import torch
+import torch.nn as nn
 from torch.nn.functional import relu
+import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
@@ -55,16 +58,14 @@ def adv_loss(lamb,
 
     return (sq_diff + dist_loss).mean()
 # ==========================================================================================================================================================
-
-def pointIsInConvexHull(points, point):
-    
-    hull = ConvexHull(points)
+# Convex Hull projection and check
+def pointIsInConvexHull(hull, point):
     A, b = hull.equations[:, :-1], hull.equations[:, -1:]
     eps = np.finfo(np.float32).eps
+    return contained(point, eps, A, b)
 
-    return contained(point,eps)
 
-def contained(x,eps):
+def contained(x, eps, A, b):
     return np.all(np.asarray(x) @ A.T + b.T < eps, axis=1)
 
 # Model Training

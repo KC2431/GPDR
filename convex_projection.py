@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 from scipy.spatial import ConvexHull
 import numpy as np
@@ -24,7 +25,8 @@ def convex_hull_proj(
         ):
 
     from sklearn.preprocessing import MinMaxScaler
-    
+
+    print(f"Dataset : {adv_data_path}")
     model = torch.load(trained_model_path)
 
     df = pd.read_csv(original_data_path)
@@ -33,6 +35,7 @@ def convex_hull_proj(
     req_cols = ['Pregnancies', 'Glucose', 'BloodPressure', 'SkinThickness', 'Insulin', 'BMI', 'DiabetesPedigreeFunction', 'Age']
 
     df = df[df['Outcome'] == 1]
+    origData = df
     df = df[req_cols]
     
     scaler = MinMaxScaler()
@@ -44,48 +47,48 @@ def convex_hull_proj(
 
     hull = ConvexHull(df)
     a = pointIsInConvexHull(hull, saif)
+
+    print(f"Number of points in Convex Hull before projection {a.tolist().count(True)}/{saif.shape[0]}")
     saifNotInConvexHull = saif[~a]
 
     points = torch.tensor(df, device=device)
-    saif = torch.tensor(saifNotInConvexHull, device=device, dtype = torch.float32)
+    saifNotInConvexHull = torch.tensor(saifNotInConvexHull, device=device, dtype = torch.double)
     
     with torch.no_grad():
         model = model.to(device)
-    
 
-    saifClone = saif.clone()
+    saifNotInConvexHullClone = saifNotInConvexHull.clone()
     lamb = lamb
     
-    before_projection = model(saif).round().reshape(-1)
-
-    saif = torch.tensor(saifNotInConvexHull, device=device, dtype = torch.double)
-
-    print(f'The avg L1 norm diff before: {torch.norm(saifClone - saif, p = 1, dim = 1).mean()}')
+    print(f'The avg L1 norm diff before: {torch.norm(saifNotInConvexHullClone.cpu() - saifNotInConvexHull.cpu(), p = 1, dim = 1).mean()}')
     print(f'Value of lambda is {lamb}')
 
-    saif.requires_grad = True
-    points_optimizer = torch.optim.Adam([saif], lr=1e-2)
+    saifNotInConvexHull.requires_grad = True
+    points_optimizer = torch.optim.Adam([saifNotInConvexHull], lr=1e-2)
 
     for epoch in range(num_iterates):
         points_optimizer.zero_grad()
-        farthest_points = get_farthest_points(points, saif)
-        loss = torch.norm(farthest_points - saif, p=1, dim = 1) + lamb * torch.norm(saifClone - saif,p = 1, dim = 1)
+        farthest_points = get_farthest_points(points, saifNotInConvexHull)
+        loss = torch.norm(farthest_points - saifNotInConvexHull, p=1, dim = 1) + lamb * torch.norm(saifNotInConvexHullClone - saifNotInConvexHull,p = 1, dim = 1)
         loss = loss.mean() 
         loss.backward()
         points_optimizer.step()
             
         if epoch % 200 == 0:
             print(f'Epoch {epoch}, Loss: {loss.item()}')
-            NumPointsInHull = pointIsInConvexHull(hull, saif.detach().cpu().numpy())
+            NumPointsInHull = pointIsInConvexHull(hull, saifNotInConvexHull.detach().cpu().numpy())
             NumPointsInHull_true = NumPointsInHull.tolist().count(True)
-            print(f'Total points projected into hull {NumPointsInHull_true}/{saif.shape[0]}')
+            print(f'Total points projected into hull {NumPointsInHull_true}/{saifNotInConvexHull.shape[0]}')
     
-    print(f'The avg L1 norm diff after: {torch.norm(saifClone - saif, p = 1, dim = 1).mean()}')
+    print(f'The avg L1 norm diff after: {torch.norm(saifNotInConvexHullClone - saifNotInConvexHull, p = 0, dim = 1).mean()}')
 
-    after_projection = model(torch.tensor(saif, device=device, dtype = torch.float32)).round().reshape(-1)
+    saifNotInConvexHull = saifNotInConvexHull.detach()
+    saif[~a] = saifNotInConvexHull.cpu().numpy()
 
-    print(torch.norm(before_projection - after_projection,p = 1))
-    print(saif_scaler.inverse_transform(saifClone.cpu().numpy()))
-    print(saif_scaler.inverse_transform(saif.detach().cpu().numpy()))
-    
-    return saifClone, saif
+    with torch.no_grad():
+        output = model(torch.tensor(saif, dtype=torch.float32).cuda())
+
+    saif = np.concatenate([saif, output.detach().cpu().numpy()], axis=1)
+    pd.DataFrame(saif, columns=origData.columns).to_csv(f"{adv_data_path}_proj.csv",index = False)
+
+    return saifNotInConvexHullClone, saifNotInConvexHull

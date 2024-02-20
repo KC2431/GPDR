@@ -11,7 +11,7 @@ if __name__ == '__main__':
 
     model = get_trained_model(file_name='diabetes.csv',
                               train=True,
-                              batch_size=10,
+                              batch_size=40,
                               shuffle=False,
                               train_test_ratio=0.2,
                               num_epochs=400,
@@ -37,7 +37,7 @@ if __name__ == '__main__':
 
     
     NotInConvexHullData, InConvexHullData = convex_hull_proj(original_data_path='diabetes.csv',
-                                                             adv_data_path='SAIFresults.csv',
+                                                             adv_data_path='results.csv',
                                                              trained_model_path='trained_model.pt',
                                                              device=device,
                                                              lamb=0.9,

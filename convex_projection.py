@@ -80,7 +80,7 @@ def convex_hull_proj(
             NumPointsInHull_true = NumPointsInHull.tolist().count(True)
             print(f'Total points projected into hull {NumPointsInHull_true}/{saifNotInConvexHull.shape[0]}')
     
-    print(f'The avg L1 norm diff after: {torch.norm(saifNotInConvexHullClone - saifNotInConvexHull, p = 0, dim = 1).mean()}')
+    print(f'The avg L1 norm diff after: {torch.norm(saifNotInConvexHullClone - saifNotInConvexHull, p = 1, dim = 1).mean()}')
 
     saifNotInConvexHull = saifNotInConvexHull.detach()
     saif[~a] = saifNotInConvexHull.cpu().numpy()

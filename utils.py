@@ -57,6 +57,7 @@ def adv_loss(lamb,
         raise ValueError("Method can only be L1_MAD or Euclid")
 
     return (sq_diff + dist_loss).mean()
+
 # ==========================================================================================================================================================
 # Convex Hull projection and check
 def pointIsInConvexHull(hull, point):
@@ -100,7 +101,7 @@ def get_trained_model(file_name,
     y_test = torch.tensor(y_test).to(device = 'cuda:0',dtype = torch.float32)
 
     training_data = CustomDataset(X_train,y_train)
-    data_loader = DataLoader(training_data, batch_size = batch_size, shuffle = shuffle)
+    data_loader = DataLoader(training_data, batch_size = batch_size, shuffle = True)
 
     if train:
 
@@ -128,9 +129,6 @@ def get_trained_model(file_name,
 
                 acc = (y_pred.round().view(y.shape[0]) == y).float().mean()
 
-            training_bar.set_postfix(Acc=float(acc))
-
-        
         model.eval()
 
         print('Testing the model now.')

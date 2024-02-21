@@ -31,11 +31,15 @@ def L1_MAD_attack(file_name,
     entire_X = scaler.fit_transform(entire_X)
 
     entire_X = torch.tensor(entire_X, dtype = torch.float32,device = device)
-    entire_Y = torch.tensor(entire_Y, dtype=torch.float32,device = device)
+    entire_Y = torch.tensor(entire_Y, dtype = torch.float32,device = device)
 
-    X_pert = torch.rand_like(entire_X,requires_grad=True,device = device)    
-    y_target = torch.zeros_like(entire_Y, device=device)
-    y_target.add_(target)
+    X_pert = entire_X.clone() + 0.01 * torch.rand_like(entire_X)
+    X_pert.requires_grad = True
+    X_pert = X_pert.to(device)
+        
+    y_target = 1 - entire_Y
+    y_target = y_target.to(device)
+    
 
     adv_optimizer = torch.optim.Adam([X_pert],lr = optim_lr)
     
@@ -71,9 +75,11 @@ def L1_MAD_attack(file_name,
     X_pert = torch.where(X_pert < 0, torch.zeros_like(X_pert), X_pert)
 
     with torch.no_grad():
-        X_pert_pred = model(X_pert)
+        X_pert_pred = torch.round(model(X_pert), decimals=2)
     
-    avg_L0_norm = torch.norm(torch.round(entire_X - X_pert,decimals = 3),p = 1, dim = 1).mean()
+    avg_L0_norm = torch.abs(entire_X - X_pert)
+    avg_L0_norm = torch.where(avg_L0_norm < 0.001, torch.tensor(0.0, device=device), avg_L0_norm)
+    avg_L0_norm = torch.norm(avg_L0_norm, p = 0, dim = 1).mean()
 
     entire_X = scaler.inverse_transform(entire_X.cpu().numpy())
     X_pert_inv_scaled = scaler.inverse_transform(X_pert.cpu().numpy())
@@ -95,7 +101,7 @@ def SAIF(model,
          device,
          num_epochs,
          targeted = True,
-         k = 3,
+         k = 1,
          eps = 1.0):
 
 
@@ -120,8 +126,8 @@ def SAIF(model,
     input_clone = entire_X.clone()
     input_clone.requires_grad = True
 
-    y_target = torch.zeros_like(entire_Y, device=device)
-    y_target.add_(labels)
+    y_target = 1 - entire_Y
+    y_target = y_target.to(device)
 
     out = model(input_clone)
     loss = -loss_fn(out,y_target.reshape(-1,1))
@@ -183,9 +189,12 @@ def SAIF(model,
     X_adv = torch.where(X_adv > 1, torch.ones_like(X_adv), X_adv)
     X_adv = torch.where(X_adv < 0, torch.zeros_like(X_adv), X_adv)
 
-    X_adv_pred = model(X_adv)
+    with torch.no_grad():
+        X_adv_pred = torch.round(model(X_adv), decimals=2)
     
-    avg_L0_norm = torch.norm(torch.round(entire_X - X_adv,decimals = 3),p = 1, dim = 1).mean()
+    avg_L0_norm = torch.abs(entire_X - X_adv)
+    avg_L0_norm = torch.where(avg_L0_norm < 0.001, torch.tensor(0.0, device=device), avg_L0_norm)
+    avg_L0_norm = torch.norm(avg_L0_norm, p = 0, dim = 1).mean() 
 
     X_adv = scaler.inverse_transform(X_adv.cpu().numpy())
     entire_X = scaler.inverse_transform(entire_X.cpu().detach().numpy())

@@ -11,8 +11,8 @@ if __name__ == '__main__':
 
     model = get_trained_model(file_name='diabetes.csv',
                               train=True,
-                              batch_size=40,
-                              shuffle=False,
+                              batch_size=32,
+                              shuffle=True,
                               train_test_ratio=0.2,
                               num_epochs=400,
                               lr=1e-2,

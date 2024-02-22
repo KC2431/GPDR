@@ -17,6 +17,7 @@ def get_farthest_points(points, target_points):
 def convex_hull_proj(
         original_data_path: str,
         adv_data_path: str,
+        X,
         trained_model_path: str,
         device: str,
         lamb: float,
@@ -28,6 +29,7 @@ def convex_hull_proj(
 
     print(f"Dataset : {adv_data_path}")
     model = torch.load(trained_model_path)
+    model.eval()
 
     df = pd.read_csv(original_data_path)
     saif = pd.read_csv(adv_data_path)
@@ -35,21 +37,21 @@ def convex_hull_proj(
     req_cols = ['Pregnancies', 'Glucose', 'BloodPressure', 'SkinThickness', 'Insulin', 'BMI', 'DiabetesPedigreeFunction', 'Age']
 
     df = df[df['Outcome'] == 1]
-    origData = df
     df = df[req_cols]
     
     scaler = MinMaxScaler()
     df = scaler.fit_transform(df.values)
 
-    saif_scaler = MinMaxScaler()
-    saif = saif[req_cols]
-    saif = saif_scaler.fit_transform(saif.values)
+    origSaif = saif[req_cols]
+    saif_outcome_one  = saif[saif['Outcome'] == 1.0]
+    saif_outcome_one = saif_outcome_one[req_cols]
+    
 
     hull = ConvexHull(df)
-    a = pointIsInConvexHull(hull, saif)
+    a = pointIsInConvexHull(hull, saif_outcome_one)
 
-    print(f"Number of points in Convex Hull before projection {a.tolist().count(True)}/{saif.shape[0]}")
-    saifNotInConvexHull = saif[~a]
+    print(f"Number of points in Convex Hull before projection {a.tolist().count(True)}/{saif_outcome_one.shape[0]}")
+    saifNotInConvexHull = saif_outcome_one[~a].values
 
     points = torch.tensor(df, device=device)
     saifNotInConvexHull = torch.tensor(saifNotInConvexHull, device=device, dtype = torch.double)
@@ -60,7 +62,6 @@ def convex_hull_proj(
     saifNotInConvexHullClone = saifNotInConvexHull.clone()
     lamb = lamb
     
-    print(f'The avg L1 norm diff before: {torch.norm(saifNotInConvexHullClone.cpu() - saifNotInConvexHull.cpu(), p = 1, dim = 1).mean()}')
     print(f'Value of lambda is {lamb}')
 
     saifNotInConvexHull.requires_grad = True
@@ -80,15 +81,24 @@ def convex_hull_proj(
             NumPointsInHull_true = NumPointsInHull.tolist().count(True)
             print(f'Total points projected into hull {NumPointsInHull_true}/{saifNotInConvexHull.shape[0]}')
     
-    print(f'The avg L1 norm diff after: {torch.norm(saifNotInConvexHullClone - saifNotInConvexHull, p = 1, dim = 1).mean()}')
 
     saifNotInConvexHull = saifNotInConvexHull.detach()
-    saif[~a] = saifNotInConvexHull.cpu().numpy()
+    saif_outcome_one[~a] = saifNotInConvexHull.cpu().numpy()
+    saif.loc[saif["Outcome"] == 1.0, req_cols] = saif_outcome_one.values
+    print(saif)
+
+    pert = np.abs(X.cpu().numpy() - saif[req_cols].values)
+    pert = np.where(pert < 0.01, np.array(0.0), pert)
+    print(f'The avg L0 norm after convex projection: {np.linalg.norm(pert, ord = 0, axis = 1).mean()}')
 
     with torch.no_grad():
-        output = model(torch.tensor(saif, dtype=torch.float32).cuda())
+        pert_output = model(torch.tensor(saif[req_cols].values, dtype=torch.float32).cuda()).round()
+        orig_output = model(torch.tensor(origSaif.values, dtype=torch.float32).cuda()).round()
+        print(torch.sum(pert_output.squeeze() != orig_output.squeeze()))
+        print(pert_output.squeeze())
+        print(orig_output.squeeze())
+    saif = np.concatenate([saif[req_cols].values, output.detach().cpu().numpy()], axis=1)
+    pd.DataFrame(saif, columns=req_cols.append("Outcome")).to_csv(f"{adv_data_path}_proj.csv",index = False)
 
-    saif = np.concatenate([saif, output.detach().cpu().numpy()], axis=1)
-    pd.DataFrame(saif, columns=origData.columns).to_csv(f"{adv_data_path}_proj.csv",index = False)
 
     return saifNotInConvexHullClone, saifNotInConvexHull

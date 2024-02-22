@@ -6,11 +6,9 @@ if __name__ == '__main__':
 
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     num_epochs = 500
-    file_name = 'diabetes.csv'
-    target = 0.5
 
-    model = get_trained_model(file_name='diabetes.csv',
-                              train=True,
+    model, X_test, y_test = get_trained_model(file_name='diabetes.csv',
+                              train=False,
                               batch_size=32,
                               shuffle=True,
                               train_test_ratio=0.2,
@@ -21,27 +19,25 @@ if __name__ == '__main__':
     
     loss_fn = torch.nn.BCELoss()
     x_pert_SAIF = SAIF(model = model,
-                       file_name=file_name,
-                       labels=target,
+                       X=X_test,
+                       Y=y_test,
                        loss_fn=loss_fn,
                        device=device,
                        num_epochs=num_epochs)
     
-    X_pert_L1_MAD = L1_MAD_attack(file_name=file_name,
+    X_pert_L1_MAD = L1_MAD_attack(X=X_test,
+                                  Y=y_test,
                                   device=device,
-                                  target=target,
-                                  lamb=10,
+                                  lamb=1e-10,
                                   num_iters=num_epochs,
                                   optim_lr=1e-2,
                                   model=model)
 
-    
     NotInConvexHullData, InConvexHullData = convex_hull_proj(original_data_path='diabetes.csv',
-                                                             adv_data_path='results.csv',
+                                                             adv_data_path='SAIFresults.csv',
                                                              trained_model_path='trained_model.pt',
+                                                             X=X_test,
                                                              device=device,
-                                                             lamb=0.9,
+                                                             lamb=0.94,
                                                              optim_lr=1e-2,
                                                              num_iterates=201)    
-    
-    

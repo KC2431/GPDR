@@ -13,13 +13,14 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
-torch.manual_seed(18)
+torch.manual_seed(10)
 
 # loss functions 
 # ==========================================================================================================================================================
 def L1_MAD_weighted(x_pert,x_orig):
     
     MAD = median_abs_deviation(x_orig.cpu().numpy(),axis = 0)
+    MAD = np.where(MAD < 0.0001, MAD.max(), MAD)
     diff = torch.abs(x_orig - x_pert)
     return (diff / torch.tensor(MAD, device=x_orig.device)).sum(dim = 1)
 
@@ -157,7 +158,7 @@ def get_trained_model(file_name,
         model.eval()
     
     print('======================================================================')
-    return model
+    return model, X_test, y_test
     
 # ==========================================================================================================================================================
 

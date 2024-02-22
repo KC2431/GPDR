@@ -8,30 +8,40 @@ import torch
 from tqdm import tqdm
 from utils import adv_loss
 
+torch.manual_seed(11)
 # Adversarial attacks
 # ==========================================================================================================================================================
 
-def L1_MAD_attack(file_name,
+def L1_MAD_attack(X,
+                  Y,
                   device,
-                  target,
                   lamb,
                   num_iters,
                   optim_lr,
                   model,
                   ):
+    """
+    Args:
+        file_name (_type_): _description_
+        device (_type_): _description_
+        target (_type_): _description_
+        lamb (_type_): _description_
+        num_iters (_type_): _description_
+        optim_lr (_type_): _description_
+        model (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     print('======================================================================')
     print('L1 weighted by MAD attack')
 
-    data = pd.read_csv(file_name)
-    scaler = MinMaxScaler()
+    columns = ['Pregnancies', 'Glucose', 'BloodPressure', 'SkinThickness', 'Insulin',
+       'BMI', 'DiabetesPedigreeFunction', 'Age', 'Outcome']
 
-    entire_X = data.iloc[:,:-1].values
-    entire_Y = data.iloc[:,-1].values
-    
-    entire_X = scaler.fit_transform(entire_X)
 
-    entire_X = torch.tensor(entire_X, dtype = torch.float32,device = device)
-    entire_Y = torch.tensor(entire_Y, dtype = torch.float32,device = device)
+    entire_X = X
+    entire_Y = Y
 
     X_pert = entire_X.clone() + 0.01 * torch.rand_like(entire_X)
     X_pert.requires_grad = True
@@ -67,25 +77,26 @@ def L1_MAD_attack(file_name,
         loss.backward()
         adv_optimizer.step()
             
-        pert_bar.set_postfix(loss = float(loss)) 
-        
+        pert_bar.set_postfix(loss = float(loss))
 
+        if i % 10 == 0:
+            lamb *= 2.0
+        
     X_pert = X_pert.detach()
     X_pert = torch.where(X_pert > 1, torch.ones_like(X_pert), X_pert)
     X_pert = torch.where(X_pert < 0, torch.zeros_like(X_pert), X_pert)
 
     with torch.no_grad():
-        X_pert_pred = torch.round(model(X_pert), decimals=2)
+        X_pert_pred = torch.round(model(X_pert))
+        print(f"Number of successful counterfactuals : {torch.sum(X_pert_pred.squeeze() != entire_Y.squeeze())} / {entire_X.shape[0]}")
     
     avg_L0_norm = torch.abs(entire_X - X_pert)
     avg_L0_norm = torch.where(avg_L0_norm < 0.001, torch.tensor(0.0, device=device), avg_L0_norm)
     avg_L0_norm = torch.norm(avg_L0_norm, p = 0, dim = 1).mean()
 
-    entire_X = scaler.inverse_transform(entire_X.cpu().numpy())
-    X_pert_inv_scaled = scaler.inverse_transform(X_pert.cpu().numpy())
 
     print(f'The mean L0 norm for the perturbation is {avg_L0_norm}')
-    pert_data = pd.DataFrame(np.concatenate((X_pert_inv_scaled.round(3), X_pert_pred.cpu().numpy()), axis=1),columns=data.columns)
+    pert_data = pd.DataFrame(np.concatenate((X_pert.detach().cpu().numpy(), X_pert_pred.cpu().numpy()), axis=1),columns=columns)
     pert_data.to_csv('results.csv',index=False)
     
     print('The Results have been saved as results.csv')
@@ -95,29 +106,40 @@ def L1_MAD_attack(file_name,
 
 
 def SAIF(model,
-         file_name,
-         labels,
+         X,
+         Y,
          loss_fn,
          device,
          num_epochs,
          targeted = True,
-         k = 1,
+         k = 2,
          eps = 1.0):
+    """SAIF
+
+    Args:
+        model (_type_): _description_
+        file_name (_type_): _description_
+        labels (_type_): _description_
+        loss_fn (_type_): _description_
+        device (_type_): _description_
+        num_epochs (_type_): _description_
+        targeted (bool, optional): _description_. Defaults to True.
+        k (int, optional): _description_. Defaults to 1.
+        eps (float, optional): _description_. Defaults to 1.0.
+
+    Returns:
+        X_adv: Adversarial instance of the input
+    """
 
 
     print('======================================================================')
     print('SAIF method')
 
-    data = pd.read_csv(file_name)
-    scaler = MinMaxScaler()
+    columns = ['Pregnancies', 'Glucose', 'BloodPressure', 'SkinThickness', 'Insulin',
+       'BMI', 'DiabetesPedigreeFunction', 'Age', 'Outcome']
 
-    entire_X = data.iloc[:,:-1].values
-    entire_Y = data.iloc[:,-1].values
-    
-    entire_X = scaler.fit_transform(entire_X)
-
-    entire_X = torch.tensor(entire_X, dtype = torch.float32,device = device)
-    entire_Y = torch.tensor(entire_Y, dtype=torch.float32,device = device)
+    entire_X = X
+    entire_Y = Y
 
     model.eval()
     for param in model.parameters():
@@ -190,18 +212,19 @@ def SAIF(model,
     X_adv = torch.where(X_adv < 0, torch.zeros_like(X_adv), X_adv)
 
     with torch.no_grad():
-        X_adv_pred = torch.round(model(X_adv), decimals=2)
+        X_adv_pred = torch.round(model(X_adv))
+        print(f"Number of successful counterfactuals : {torch.sum(X_adv_pred.squeeze() != entire_Y.squeeze())} / {entire_X.shape[0]}")
     
     avg_L0_norm = torch.abs(entire_X - X_adv)
     avg_L0_norm = torch.where(avg_L0_norm < 0.001, torch.tensor(0.0, device=device), avg_L0_norm)
     avg_L0_norm = torch.norm(avg_L0_norm, p = 0, dim = 1).mean() 
 
-    X_adv = scaler.inverse_transform(X_adv.cpu().numpy())
-    entire_X = scaler.inverse_transform(entire_X.cpu().detach().numpy())
+    X_adv = X_adv.cpu().numpy()
+    entire_X = entire_X.cpu().detach().numpy()
     
     print(f'The mean L0 norm for the perturbation is {avg_L0_norm}.')
     X_adv_df = torch.cat((torch.Tensor(X_adv), X_adv_pred.cpu()), dim = 1)
-    pert_data = pd.DataFrame(X_adv_df.detach().numpy(),columns=data.columns)
+    pert_data = pd.DataFrame(X_adv_df.detach().numpy(),columns=columns)
     pert_data.to_csv('SAIFresults.csv',index=False)    
 
     print('The Results have been saved as SAIFresults.csv')

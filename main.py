@@ -11,7 +11,7 @@ if __name__ == '__main__':
                               train=False,
                               batch_size=32,
                               shuffle=True,
-                              train_test_ratio=0.2,
+                              train_test_ratio=0.13,
                               num_epochs=400,
                               lr=1e-2,
                               weight_decay=1e-3,
@@ -38,6 +38,15 @@ if __name__ == '__main__':
                                                              trained_model_path='trained_model.pt',
                                                              X=X_test,
                                                              device=device,
-                                                             lamb=0.94,
+                                                             lamb=0.9,
                                                              optim_lr=1e-2,
                                                              num_iterates=201)    
+
+    NotInConvexHullData, InConvexHullData = convex_hull_proj(original_data_path='diabetes.csv',
+                                                             adv_data_path='results.csv',
+                                                             trained_model_path='trained_model.pt',
+                                                             X=X_test,
+                                                             device=device,
+                                                             lamb=0.9,
+                                                             optim_lr=1e-2,
+                                                             num_iterates=201)

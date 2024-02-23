@@ -20,7 +20,7 @@ torch.manual_seed(10)
 def L1_MAD_weighted(x_pert,x_orig):
     
     MAD = median_abs_deviation(x_orig.cpu().numpy(),axis = 0)
-    MAD = np.where(MAD < 0.0001, MAD.max(), MAD)
+    MAD = np.where(np.abs(MAD) < 0.0001, np.array(0.01), MAD)
     diff = torch.abs(x_orig - x_pert)
     return (diff / torch.tensor(MAD, device=x_orig.device)).sum(dim = 1)
 
@@ -96,10 +96,10 @@ def get_trained_model(file_name,
                                                           )
 
     
-    X_train = torch.tensor(scaler.fit_transform(X_train)).to(device = 'cuda:0',dtype = torch.float32)
-    X_test = torch.tensor(scaler.transform(X_test)).to(device = 'cuda:0',dtype = torch.float32)
-    y_train = torch.tensor(y_train).to(device = 'cuda:0',dtype = torch.float32)
-    y_test = torch.tensor(y_test).to(device = 'cuda:0',dtype = torch.float32)
+    X_train = torch.tensor(scaler.fit_transform(X_train)).to(device = device,dtype = torch.float32)
+    X_test = torch.tensor(scaler.transform(X_test)).to(device = device,dtype = torch.float32)
+    y_train = torch.tensor(y_train).to(device = device,dtype = torch.float32)
+    y_test = torch.tensor(y_test).to(device = device,dtype = torch.float32)
 
     training_data = CustomDataset(X_train,y_train)
     data_loader = DataLoader(training_data, batch_size = batch_size, shuffle = True)
@@ -111,7 +111,7 @@ def get_trained_model(file_name,
 
         print('Training the model.')
 
-        model = DenseModel(X_train.shape[1],1).to(device='cuda:0')
+        model = DenseModel(X_train.shape[1],1).to(device=device)
         optimizer = torch.optim.Adam(params=model.parameters(),lr = lr,weight_decay=weight_decay)
 
         training_bar = tqdm(range(num_epochs))

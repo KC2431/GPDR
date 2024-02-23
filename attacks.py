@@ -20,15 +20,16 @@ def L1_MAD_attack(X,
                   optim_lr,
                   model,
                   ):
-    """
+    """L1_MAD_attack
+
     Args:
-        file_name (_type_): _description_
-        device (_type_): _description_
-        target (_type_): _description_
-        lamb (_type_): _description_
-        num_iters (_type_): _description_
-        optim_lr (_type_): _description_
-        model (_type_): _description_
+        X (_type_): Dataset
+        Y (_type_): Original Labels
+        device (_type_): Device (cpu or cuda)
+        lamb (_type_): Lambda
+        num_iters (_type_): Number of Iterations
+        optim_lr (_type_): Learning Rate of the Adam Optimiser
+        model (_type_): Model
 
     Returns:
         _type_: _description_
@@ -64,7 +65,7 @@ def L1_MAD_attack(X,
 
         X_pert.requires_grad = True
 
-        adv_logits = model(X_pert)
+        adv_logits = model(X_pert).squeeze()
         loss = adv_loss(lamb=lamb,
                         adv_logits=adv_logits,
                         y_target=y_target,
@@ -88,7 +89,9 @@ def L1_MAD_attack(X,
 
     with torch.no_grad():
         X_pert_pred = torch.round(model(X_pert))
-        print(f"Number of successful counterfactuals : {torch.sum(X_pert_pred.squeeze() != entire_Y.squeeze())} / {entire_X.shape[0]}")
+        print(y_target.squeeze())
+        print(X_pert_pred.squeeze())
+        print(f"Number of successful counterfactuals : {torch.sum(X_pert_pred.squeeze() == y_target)} / {entire_X.shape[0]}")
     
     avg_L0_norm = torch.abs(entire_X - X_pert)
     avg_L0_norm = torch.where(avg_L0_norm < 0.001, torch.tensor(0.0, device=device), avg_L0_norm)
@@ -112,23 +115,23 @@ def SAIF(model,
          device,
          num_epochs,
          targeted = True,
-         k = 2,
+         k = 3,
          eps = 1.0):
     """SAIF
 
     Args:
-        model (_type_): _description_
-        file_name (_type_): _description_
-        labels (_type_): _description_
-        loss_fn (_type_): _description_
-        device (_type_): _description_
-        num_epochs (_type_): _description_
-        targeted (bool, optional): _description_. Defaults to True.
-        k (int, optional): _description_. Defaults to 1.
-        eps (float, optional): _description_. Defaults to 1.0.
+        model (_type_): Model
+        X (_type_): Data to perturb
+        Y (_type_): Original labels 
+        loss_fn (_type_): Loss Function to be used
+        device (_type_): Device (cpu or cuda)
+        num_epochs (_type_): Number of epochs (or iterations)
+        targeted (bool, optional): If the attack is targeted. Defaults to True.
+        k (int, optional): Sparsity level. Defaults to 2.
+        eps (float, optional): Perturbation magnitude. Defaults to 1.0.
 
     Returns:
-        X_adv: Adversarial instance of the input
+        _type_: _description_
     """
 
 
@@ -172,10 +175,10 @@ def SAIF(model,
 
         s.requires_grad = True
         p.requires_grad = True
-        out = model(entire_X + s*p)
+        out = model(entire_X + s*p).squeeze()
 
         if targeted:
-            loss = loss_fn(out,y_target.reshape(-1,1))
+            loss = loss_fn(out,y_target)
         else: 
             loss = -loss_fn(out,y_target)
 
@@ -213,7 +216,7 @@ def SAIF(model,
 
     with torch.no_grad():
         X_adv_pred = torch.round(model(X_adv))
-        print(f"Number of successful counterfactuals : {torch.sum(X_adv_pred.squeeze() != entire_Y.squeeze())} / {entire_X.shape[0]}")
+        print(f"Number of successful counterfactuals : {torch.sum(X_adv_pred.squeeze() == y_target)} / {entire_X.shape[0]}")
     
     avg_L0_norm = torch.abs(entire_X - X_adv)
     avg_L0_norm = torch.where(avg_L0_norm < 0.001, torch.tensor(0.0, device=device), avg_L0_norm)

@@ -24,7 +24,23 @@ def convex_hull_proj(
         optim_lr: float,
         num_iterates: int
         ):
+    """covex_hull_proj
 
+    Args:
+        original_data_path (str): _description_
+        adv_data_path (str): _description_
+        X (_type_): _description_
+        trained_model_path (str): _description_
+        device (str): _description_
+        lamb (float): _description_
+        optim_lr (float): _description_
+        num_iterates (int): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    print('======================================================================')
+    print('Performing Convex Hull Projection')
     from sklearn.preprocessing import MinMaxScaler
 
     print(f"Dataset : {adv_data_path}")
@@ -53,11 +69,10 @@ def convex_hull_proj(
     print(f"Number of points in Convex Hull before projection {a.tolist().count(True)}/{saif_outcome_one.shape[0]}")
     saifNotInConvexHull = saif_outcome_one[~a].values
 
-    points = torch.tensor(df, device=device)
+    points = torch.tensor(df[hull.vertices], device=device)
     saifNotInConvexHull = torch.tensor(saifNotInConvexHull, device=device, dtype = torch.double)
     
-    with torch.no_grad():
-        model = model.to(device)
+    model = model.to(device)
 
     saifNotInConvexHullClone = saifNotInConvexHull.clone()
     lamb = lamb
@@ -69,7 +84,7 @@ def convex_hull_proj(
 
     for epoch in range(num_iterates):
         points_optimizer.zero_grad()
-        farthest_points = get_farthest_points(points, saifNotInConvexHull)
+        farthest_points = get_farthest_points(points, saifNotInConvexHull.detach())
         loss = torch.norm(farthest_points - saifNotInConvexHull, p=1, dim = 1) + lamb * torch.norm(saifNotInConvexHullClone - saifNotInConvexHull,p = 1, dim = 1)
         loss = loss.mean() 
         loss.backward()
@@ -85,20 +100,15 @@ def convex_hull_proj(
     saifNotInConvexHull = saifNotInConvexHull.detach()
     saif_outcome_one[~a] = saifNotInConvexHull.cpu().numpy()
     saif.loc[saif["Outcome"] == 1.0, req_cols] = saif_outcome_one.values
-    print(saif)
 
     pert = np.abs(X.cpu().numpy() - saif[req_cols].values)
-    pert = np.where(pert < 0.01, np.array(0.0), pert)
-    print(f'The avg L0 norm after convex projection: {np.linalg.norm(pert, ord = 0, axis = 1).mean()}')
+    pert = np.where(pert < 0.005, np.array(0.0), pert)
+    print(f'The avg L0 norm after convex projection: {np.linalg.norm(pert, ord = 0, axis = 1).mean()} and the shape is {np.linalg.norm(pert, ord = 0, axis = 1).shape}')
 
     with torch.no_grad():
         pert_output = model(torch.tensor(saif[req_cols].values, dtype=torch.float32).cuda()).round()
         orig_output = model(torch.tensor(origSaif.values, dtype=torch.float32).cuda()).round()
-        print(torch.sum(pert_output.squeeze() != orig_output.squeeze()))
-        print(pert_output.squeeze())
-        print(orig_output.squeeze())
-    saif = np.concatenate([saif[req_cols].values, output.detach().cpu().numpy()], axis=1)
-    pd.DataFrame(saif, columns=req_cols.append("Outcome")).to_csv(f"{adv_data_path}_proj.csv",index = False)
-
-
+        print(f"Number of counterfactuals that were changed: {torch.sum(orig_output.squeeze() != orig_output.squeeze())}")
+    
+    print('======================================================================')
     return saifNotInConvexHullClone, saifNotInConvexHull

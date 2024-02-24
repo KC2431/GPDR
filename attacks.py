@@ -81,7 +81,7 @@ def L1_MAD_attack(X,
         pert_bar.set_postfix(loss = float(loss))
 
         if i % 10 == 0:
-            lamb *= 2.0
+            lamb *= 1.9
         
     X_pert = X_pert.detach()
     X_pert = torch.where(X_pert > 1, torch.ones_like(X_pert), X_pert)
@@ -89,8 +89,6 @@ def L1_MAD_attack(X,
 
     with torch.no_grad():
         X_pert_pred = torch.round(model(X_pert))
-        print(y_target.squeeze())
-        print(X_pert_pred.squeeze())
         print(f"Number of successful counterfactuals : {torch.sum(X_pert_pred.squeeze() == y_target)} / {entire_X.shape[0]}")
     
     avg_L0_norm = torch.abs(entire_X - X_pert)

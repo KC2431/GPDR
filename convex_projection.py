@@ -18,6 +18,7 @@ def convex_hull_proj(
         original_data_path: str,
         adv_data_path: str,
         X,
+        Y,
         trained_model_path: str,
         device: str,
         lamb: float,
@@ -46,6 +47,8 @@ def convex_hull_proj(
     print(f"Dataset : {adv_data_path}")
     model = torch.load(trained_model_path)
     model.eval()
+    for param in model.parameters():
+        param.requires_grad = False
 
     df = pd.read_csv(original_data_path)
     saif = pd.read_csv(adv_data_path)
@@ -58,7 +61,7 @@ def convex_hull_proj(
     scaler = MinMaxScaler()
     df = scaler.fit_transform(df.values)
 
-    origSaif = saif[req_cols]
+    origSaif = torch.tensor(saif[req_cols].values, dtype=torch.float32)
     saif_outcome_one  = saif[saif['Outcome'] == 1.0]
     saif_outcome_one = saif_outcome_one[req_cols]
     
@@ -80,7 +83,7 @@ def convex_hull_proj(
     print(f'Value of lambda is {lamb}')
 
     saifNotInConvexHull.requires_grad = True
-    points_optimizer = torch.optim.Adam([saifNotInConvexHull], lr=1e-2)
+    points_optimizer = torch.optim.Adam([saifNotInConvexHull], lr=optim_lr)
 
     for epoch in range(num_iterates):
         points_optimizer.zero_grad()
@@ -107,8 +110,9 @@ def convex_hull_proj(
 
     with torch.no_grad():
         pert_output = model(torch.tensor(saif[req_cols].values, dtype=torch.float32).cuda()).round()
-        orig_output = model(torch.tensor(origSaif.values, dtype=torch.float32).cuda()).round()
-        print(f"Number of counterfactuals that were changed: {torch.sum(orig_output.squeeze() != orig_output.squeeze())}")
+        orig_output = model(origSaif.cuda()).round()
+        print(f"{torch.sum(Y.squeeze() != pert_output.squeeze())}")
+        print(f"Number of counterfactuals that were changed: {torch.sum(pert_output.squeeze() != orig_output.squeeze())}")
     
     print('======================================================================')
     return saifNotInConvexHullClone, saifNotInConvexHull

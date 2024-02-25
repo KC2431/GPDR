@@ -128,7 +128,6 @@ def get_trained_model(file_name,
                 train_loss.backward()
                 optimizer.step()
 
-                acc = (y_pred.round().view(y.shape[0]) == y).float().mean()
 
         model.eval()
 
@@ -156,6 +155,9 @@ def get_trained_model(file_name,
         print('Loading trained model.')
         model = torch.load('trained_model.pt')
         model.eval()
+
+        with torch.no_grad():
+            print(f"The accuracy for the pretrained model is {torch.sum(model(X_test).round().squeeze() == y_test)}/{X_test.shape[0]}")
     
     print('======================================================================')
     return model, X_test, y_test

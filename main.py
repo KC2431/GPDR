@@ -6,12 +6,16 @@ if __name__ == '__main__':
 
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     num_epochs = 500
+    original_dataset = 'German_credit_data.csv'
+    columns = get_column_names(original_dataset) 
+    select_features = True
 
-    model, X_test, y_test = get_trained_model(file_name='diabetes.csv',
+    model, X_test, y_test, selected_cols = get_trained_model(file_name=original_dataset,
                               train=False,
-                              batch_size=35,
+                              select_features=select_features,
+                              batch_size=32,
                               shuffle=False,
-                              train_test_ratio=0.13,
+                              train_test_ratio=0.2,
                               num_epochs=500,
                               lr=1e-2,
                               weight_decay=1e-3,
@@ -23,7 +27,8 @@ if __name__ == '__main__':
                        Y=y_test,
                        loss_fn=loss_fn,
                        device=device,
-                       num_epochs=num_epochs)
+                       num_epochs=num_epochs,
+                       columns=columns)
     
     X_pert_L1_MAD = L1_MAD_attack(X=X_test,
                                   Y=y_test,
@@ -31,11 +36,13 @@ if __name__ == '__main__':
                                   lamb=1e-10,
                                   num_iters=num_epochs,
                                   optim_lr=1e-2,
-                                  model=model)
+                                  model=model,
+                                  columns=columns)
 
-    NotInConvexHullData, InConvexHullData = convex_hull_proj(original_data_path='diabetes.csv',
+    NotInConvexHullData, InConvexHullData = convex_hull_proj(original_data_path=original_dataset,
                                                              adv_data_path='SAIFresults.csv',
                                                              trained_model_path='trained_model.pt',
+                                                             selected_cols=selected_cols,
                                                              X=X_test,
                                                              Y=y_test,
                                                              device=device,
@@ -43,7 +50,7 @@ if __name__ == '__main__':
                                                              optim_lr=1e-2,
                                                              num_iterates=201)    
 
-    NotInConvexHullData, InConvexHullData = convex_hull_proj(original_data_path='diabetes.csv',
+    NotInConvexHullData, InConvexHullData = convex_hull_proj(original_data_path=original_dataset,
                                                              adv_data_path='results.csv',
                                                              trained_model_path='trained_model.pt',
                                                              X=X_test,

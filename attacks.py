@@ -19,6 +19,7 @@ def L1_MAD_attack(X,
                   num_iters,
                   optim_lr,
                   model,
+                  columns
                   ):
     """L1_MAD_attack
 
@@ -36,10 +37,6 @@ def L1_MAD_attack(X,
     """
     print('======================================================================')
     print('L1 weighted by MAD attack')
-
-    columns = ['Pregnancies', 'Glucose', 'BloodPressure', 'SkinThickness', 'Insulin',
-       'BMI', 'DiabetesPedigreeFunction', 'Age', 'Outcome']
-
 
     entire_X = X
     entire_Y = Y
@@ -93,16 +90,11 @@ def L1_MAD_attack(X,
     
     avg_L0_norm = torch.abs(entire_X - X_pert)
     avg_L0_norm = torch.where(avg_L0_norm < 0.001, torch.tensor(0.0, device=device), avg_L0_norm)
-    avg_L0_norm = torch.norm(avg_L0_norm, p = 0, dim = 1).mean()
+    avg_L0_norm = torch.norm(avg_L0_norm, p = 0)
 
 
     print(f'The mean L0 norm for the perturbation is {avg_L0_norm}')
-    pert_data = pd.DataFrame(np.concatenate((X_pert.detach().cpu().numpy(), X_pert_pred.cpu().numpy()), axis=1),columns=columns)
-    pert_data.to_csv('results.csv',index=False)
-    
-    print('The Results have been saved as results.csv')
     print('======================================================================')
-    
     return X_pert
 
 
@@ -112,6 +104,7 @@ def SAIF(model,
          loss_fn,
          device,
          num_epochs,
+         columns,
          targeted = True,
          k = 3,
          eps = 1.0):
@@ -135,9 +128,6 @@ def SAIF(model,
 
     print('======================================================================')
     print('SAIF method')
-
-    columns = ['Pregnancies', 'Glucose', 'BloodPressure', 'SkinThickness', 'Insulin',
-       'BMI', 'DiabetesPedigreeFunction', 'Age', 'Outcome']
 
     entire_X = X
     entire_Y = Y
@@ -218,17 +208,14 @@ def SAIF(model,
     
     avg_L0_norm = torch.abs(entire_X - X_adv)
     avg_L0_norm = torch.where(avg_L0_norm < 0.001, torch.tensor(0.0, device=device), avg_L0_norm)
-    avg_L0_norm = torch.norm(avg_L0_norm, p = 0, dim = 1).mean() 
+    avg_L0_norm = torch.norm(avg_L0_norm, p = 0) 
 
     X_adv = X_adv.cpu().numpy()
     entire_X = entire_X.cpu().detach().numpy()
     
-    print(f'The mean L0 norm for the perturbation is {avg_L0_norm}.')
-    X_adv_df = torch.cat((torch.Tensor(X_adv), X_adv_pred.cpu()), dim = 1)
-    pert_data = pd.DataFrame(X_adv_df.detach().numpy(),columns=columns)
-    pert_data.to_csv('SAIFresults.csv',index=False)    
+    print(f'The number of non-zero elements for the perturbation is {avg_L0_norm}.')
 
-    print('The Results have been saved as SAIFresults.csv')
+    
     print('======================================================================')
 
     return X_adv   

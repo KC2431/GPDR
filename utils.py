@@ -4,6 +4,8 @@ import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from scipy.spatial import ConvexHull
 from scipy.stats import median_abs_deviation
+from sklearn.feature_selection import RFE
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix, accuracy_score
 from sklearn.model_selection import train_test_split
 import torch
@@ -14,6 +16,12 @@ from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
 torch.manual_seed(10)
+
+# Dataframe functions
+# ==========================================================================================================================================================
+def get_column_names(file_name):
+    data = pd.read_csv(file_name)
+    return data.columns
 
 # loss functions 
 # ==========================================================================================================================================================
@@ -74,6 +82,7 @@ def contained(x, eps, A, b):
 # =========================================================================================================================================================
 def get_trained_model(file_name,
                       train,
+                      select_features,
                       batch_size,
                       shuffle,
                       train_test_ratio,
@@ -88,6 +97,15 @@ def get_trained_model(file_name,
     X = data.iloc[:,:-1].values
     Y = data.iloc[:,-1].values
     
+    if select_features:
+        max_features = 8 
+        rfe = RFE(RandomForestClassifier(), n_features_to_select=max_features)
+        
+        rfe.fit(X,Y)
+        X = rfe.transform(X)
+
+        columns_selected = data.iloc[:,:-1].columns[rfe.support_]
+
     test_size = train_test_ratio
     X_train, X_test, y_train, y_test = train_test_split(X,
                                                           Y,
@@ -147,7 +165,7 @@ def get_trained_model(file_name,
                                         y_test_pred.cpu().numpy()
                                       )
             print(f'The accuracy on test set is {accu_score*100:.2f}%')
-        
+            print(cm)
         print("Saving model as trained_model.pt")
         torch.save(model,'trained_model.pt')
 
@@ -160,7 +178,11 @@ def get_trained_model(file_name,
             print(f"The accuracy for the pretrained model is {torch.sum(model(X_test).round().squeeze() == y_test)}/{X_test.shape[0]}")
     
     print('======================================================================')
-    return model, X_test, y_test
+    
+    if select_features:
+        return model, X_test, y_test, columns_selected
+    else:
+        return model, X_test, y_test
     
 # ==========================================================================================================================================================
 

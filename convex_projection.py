@@ -19,6 +19,7 @@ def convex_hull_proj(
         adv_data_path: str,
         X,
         Y,
+        selected_cols,
         trained_model_path: str,
         device: str,
         lamb: float,
@@ -43,6 +44,7 @@ def convex_hull_proj(
     """
     print('======================================================================')
     print('Performing Convex Hull Projection')
+
     from sklearn.preprocessing import MinMaxScaler
 
     print(f"Dataset : {adv_data_path}")
@@ -55,20 +57,24 @@ def convex_hull_proj(
     df = pd.read_csv(original_data_path)
     saif = pd.read_csv(adv_data_path)
 
-    req_cols = ['Pregnancies', 'Glucose', 'BloodPressure', 'SkinThickness', 'Insulin', 'BMI', 'DiabetesPedigreeFunction', 'Age']
+    req_cols = selected_cols
+    target_col = df.columns[-1]
 
-    df = df[df['Outcome'] == 1]
+    df = df[df[target_col] == 0]
     df = df[req_cols]
     
     scaler = MinMaxScaler()
     df = scaler.fit_transform(df.values)
 
-    origSaif = torch.tensor(saif[req_cols].values, dtype=torch.float32)
-    saif_outcome_one  = saif[saif['Outcome'] == 1.0]
-    saif_outcome_one = saif_outcome_one[req_cols]
     
 
-    hull = ConvexHull(df)
+    origSaif = torch.tensor(saif[req_cols].values, dtype=torch.float32)
+    saif_outcome_one  = saif[saif[target_col] == 0.0]
+    saif_outcome_one = saif_outcome_one[req_cols]
+    
+    print(df.shape)
+    hull = ConvexHull(df, qhull_options="Qx")
+    print("Convex hull done")
     a = pointIsInConvexHull(hull, saif_outcome_one)
 
     print(f"Number of points in Convex Hull before projection {a.tolist().count(True)}/{saif_outcome_one.shape[0]}")

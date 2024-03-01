@@ -5,7 +5,7 @@ import numpy as np
 from utils import pointIsInConvexHull
 import pandas as pd
 from scipy.spatial import ConvexHull
-
+import pickle
 
 def get_farthest_points(points, target_points):
     distances = torch.cdist(points, target_points,p=1)
@@ -18,8 +18,9 @@ def convex_hull_proj(
         original_data_path: str,
         adv_data_path: str,
         X,
-        Y,
         selected_cols,
+        save_hull,
+        no_hull_saved,
         trained_model_path: str,
         device: str,
         lamb: float,
@@ -66,15 +67,19 @@ def convex_hull_proj(
     scaler = MinMaxScaler()
     df = scaler.fit_transform(df.values)
 
-    
-
+    """
     origSaif = torch.tensor(saif[req_cols].values, dtype=torch.float32)
     saif_outcome_one  = saif[saif[target_col] == 0.0]
     saif_outcome_one = saif_outcome_one[req_cols]
-    
-    print(df.shape)
-    hull = ConvexHull(df, qhull_options="Qx")
-    print("Convex hull done")
+    """
+    if no_hull_saved:
+        hull = ConvexHull(df, qhull_options="Qx")
+    else:
+        hull = pickle.load(open("convex.hull", "rb"))
+
+    if save_hull:
+        pickle.dump(hull,open("convex.hull", "wb"))
+ 
     a = pointIsInConvexHull(hull, saif_outcome_one)
 
     print(f"Number of points in Convex Hull before projection {a.tolist().count(True)}/{saif_outcome_one.shape[0]}")

@@ -1,3 +1,4 @@
+from imblearn.over_sampling import SMOTE
 import math
 import numpy as np
 import pandas as pd
@@ -82,6 +83,7 @@ def contained(x, eps, A, b):
 # =========================================================================================================================================================
 def get_trained_model(file_name,
                       train,
+                      dataset,
                       select_features,
                       batch_size,
                       shuffle,
@@ -91,6 +93,11 @@ def get_trained_model(file_name,
                       weight_decay,
                       device):
     print('======================================================================')
+
+    available_dataset = ['diabetes','german_credit_data']
+    if dataset not in available_dataset:
+        raise ValueError(f"The dataset should be either {available_dataset[0]} or {available_dataset[1]}")
+
     data = pd.read_csv(file_name)
     scaler = MinMaxScaler()
 
@@ -166,12 +173,12 @@ def get_trained_model(file_name,
                                       )
             print(f'The accuracy on test set is {accu_score*100:.2f}%')
             print(cm)
-        print("Saving model as trained_model.pt")
-        torch.save(model,'trained_model.pt')
+        print(f"Saving model as {dataset}_trained_model.pt")
+        torch.save(model,f'{dataset}_trained_model.pt')
 
     else:
-        print('Loading trained model.')
-        model = torch.load('trained_model.pt')
+        print(f'Loading trained model for dataset {dataset}.')
+        model = torch.load(f'{dataset}_trained_model.pt')
         model.eval()
 
         with torch.no_grad():
@@ -179,10 +186,16 @@ def get_trained_model(file_name,
     
     print('======================================================================')
     
+    Y = np.reshape(Y, (-1,1))
+    X = torch.cat((X_train, X_test),dim = 0)
+    scaled_data = pd.DataFrame(np.concatenate((X.cpu().numpy(),Y),axis=1))
+    X_sampled = scaled_data[scaled_data.iloc[:,-1] == 0].sample(n=100,random_state=22).iloc[:,:-1]
+    X_sampled = torch.tensor(X_sampled.values, dtype=torch.float32,device=device)
+
     if select_features:
-        return model, X_test, y_test, columns_selected
+        return model, X_sampled, columns_selected
     else:
-        return model, X_test, y_test
+        return model, X_sampled
     
 # ==========================================================================================================================================================
 

@@ -13,24 +13,22 @@ torch.manual_seed(11)
 # ==========================================================================================================================================================
 
 def L1_MAD_attack(X,
-                  Y,
                   device,
                   lamb,
                   num_iters,
                   optim_lr,
                   model,
-                  columns
                   ):
-    """L1_MAD_attack
+    """_summary_
 
     Args:
-        X (_type_): Dataset
-        Y (_type_): Original Labels
-        device (_type_): Device (cpu or cuda)
-        lamb (_type_): Lambda
-        num_iters (_type_): Number of Iterations
-        optim_lr (_type_): Learning Rate of the Adam Optimiser
-        model (_type_): Model
+        X (_type_): _description_
+        device (_type_): _description_
+        lamb (_type_): _description_
+        num_iters (_type_): _description_
+        optim_lr (_type_): _description_
+        model (_type_): _description_
+        columns (_type_): _description_
 
     Returns:
         _type_: _description_
@@ -39,13 +37,12 @@ def L1_MAD_attack(X,
     print('L1 weighted by MAD attack')
 
     entire_X = X
-    entire_Y = Y
 
     X_pert = entire_X.clone() + 0.01 * torch.rand_like(entire_X)
     X_pert.requires_grad = True
     X_pert = X_pert.to(device)
         
-    y_target = 1 - entire_Y
+    y_target = torch.ones(entire_X.shape[0])
     y_target = y_target.to(device)
     
 
@@ -100,11 +97,9 @@ def L1_MAD_attack(X,
 
 def SAIF(model,
          X,
-         Y,
          loss_fn,
          device,
          num_epochs,
-         columns,
          targeted = True,
          k = 3,
          eps = 1.0):
@@ -130,7 +125,6 @@ def SAIF(model,
     print('SAIF method')
 
     entire_X = X
-    entire_Y = Y
 
     model.eval()
     for param in model.parameters():
@@ -139,7 +133,7 @@ def SAIF(model,
     input_clone = entire_X.clone()
     input_clone.requires_grad = True
 
-    y_target = 1 - entire_Y
+    y_target = torch.ones(entire_X.shape[0])
     y_target = y_target.to(device)
 
     out = model(input_clone)

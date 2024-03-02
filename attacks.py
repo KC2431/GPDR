@@ -42,7 +42,7 @@ def L1_MAD_attack(X,
     X_pert.requires_grad = True
     X_pert = X_pert.to(device)
         
-    y_target = torch.ones(entire_X.shape[0])
+    y_target = torch.zeros(entire_X.shape[0])
     y_target = y_target.to(device)
     
 
@@ -133,7 +133,7 @@ def SAIF(model,
     input_clone = entire_X.clone()
     input_clone.requires_grad = True
 
-    y_target = torch.ones(entire_X.shape[0])
+    y_target = torch.zeros(entire_X.shape[0])
     y_target = y_target.to(device)
 
     out = model(input_clone)
@@ -204,12 +204,9 @@ def SAIF(model,
     avg_L0_norm = torch.where(avg_L0_norm < 0.001, torch.tensor(0.0, device=device), avg_L0_norm)
     avg_L0_norm = torch.norm(avg_L0_norm, p = 0) 
 
-    X_adv = X_adv.cpu().numpy()
-    entire_X = entire_X.cpu().detach().numpy()
+    X_adv = X_adv.detach()
     
-    print(f'The number of non-zero elements for the perturbation is {avg_L0_norm}.')
-
-    
+    print(f'The number of non-zero elements for the perturbation is {avg_L0_norm}.')    
     print('======================================================================')
 
     return X_adv   

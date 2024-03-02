@@ -112,6 +112,8 @@ def get_trained_model(file_name,
         X = rfe.transform(X)
 
         columns_selected = data.iloc[:,:-1].columns[rfe.support_]
+    else:
+        columns_selected = data.iloc[:,:-1].columns
 
     test_size = train_test_ratio
     X_train, X_test, y_train, y_test = train_test_split(X,
@@ -189,13 +191,10 @@ def get_trained_model(file_name,
     Y = np.reshape(Y, (-1,1))
     X = torch.cat((X_train, X_test),dim = 0)
     scaled_data = pd.DataFrame(np.concatenate((X.cpu().numpy(),Y),axis=1))
-    X_sampled = scaled_data[scaled_data.iloc[:,-1] == 0].sample(n=100,random_state=22).iloc[:,:-1]
+    X_sampled = scaled_data[scaled_data.iloc[:,-1] == 1].sample(n=100,random_state=22).iloc[:,:-1]
     X_sampled = torch.tensor(X_sampled.values, dtype=torch.float32,device=device)
 
-    if select_features:
-        return model, X_sampled, columns_selected
-    else:
-        return model, X_sampled
+    return model, X_sampled, columns_selected
     
 # ==========================================================================================================================================================
 

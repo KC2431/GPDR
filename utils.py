@@ -174,7 +174,7 @@ def get_trained_model(file_name,
                                         y_test_pred.cpu().numpy()
                                       )
             print(f'The accuracy on test set is {accu_score*100:.2f}%')
-            print(cm)
+
         print(f"Saving model as {dataset}_trained_model.pt")
         torch.save(model,f'{dataset}_trained_model.pt')
 
@@ -193,8 +193,8 @@ def get_trained_model(file_name,
     scaled_data = pd.DataFrame(np.concatenate((X.cpu().numpy(),Y),axis=1))
     X_sampled = scaled_data[scaled_data.iloc[:,-1] == 1].sample(n=100,random_state=22).iloc[:,:-1]
     X_sampled = torch.tensor(X_sampled.values, dtype=torch.float32,device=device)
-
-    return model, X_sampled, columns_selected
+    
+    return model, X_sampled, columns_selected, scaler
     
 # ==========================================================================================================================================================
 

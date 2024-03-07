@@ -76,11 +76,9 @@ def convex_hull_proj(
     a = pointIsInConvexHull(hull, saif_outcome_one.cpu().numpy())
 
     print(f"Number of points in Convex Hull before projection {a.tolist().count(True)}/{saif_outcome_one.shape[0]}")
-    saifNotInConvexHull = saif_outcome_one[~a]
+    saifNotInConvexHull = saif_outcome_one[~a].double()
 
     points = torch.tensor(df[hull.vertices], device=device)
-    saifNotInConvexHull = torch.tensor(saifNotInConvexHull, device=device, dtype = torch.double)
-    
     model = model.to(device)
 
     saifNotInConvexHullClone = saifNotInConvexHull.clone()
@@ -114,8 +112,8 @@ def convex_hull_proj(
     print(f"After the projection, number of points projected: {pointIsInConvexHull(hull, saif_outcome_one.cpu().numpy()).tolist().count(True)}/{saif_outcome_one.shape[0]}")
 
     pert = np.abs(X.cpu().numpy() - saif_outcome_one.cpu().numpy())
-    pert = np.where(pert < 0.005, np.array(0.0), pert)
-    print(f'The avg L0 norm after convex projection: {np.linalg.norm(pert, ord = 0, axis = 1).mean()}')
+    pert = np.where(pert < 0.001, np.array(0.0), pert)
+    print(f'The avg L0 norm after convex projection: {torch.norm(torch.tensor(pert),p=0)}')
 
     with torch.no_grad():
         pert_output = model(saif_outcome_one).round()

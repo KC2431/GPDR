@@ -18,8 +18,9 @@ def L1_MAD_attack(X,
                   num_iters,
                   optim_lr,
                   model,
+                  scaler
                   ):
-    """_summary_
+    """L1_MAD_attack
 
     Args:
         X (_type_): _description_
@@ -28,11 +29,11 @@ def L1_MAD_attack(X,
         num_iters (_type_): _description_
         optim_lr (_type_): _description_
         model (_type_): _description_
-        columns (_type_): _description_
 
     Returns:
         _type_: _description_
     """
+
     print('======================================================================')
     print('L1 weighted by MAD attack')
 
@@ -85,14 +86,18 @@ def L1_MAD_attack(X,
         X_pert_pred = torch.round(model(X_pert))
         print(f"Number of successful counterfactuals : {torch.sum(X_pert_pred.squeeze() == y_target)} / {entire_X.shape[0]}")
     
+    X_pert_clone = X_pert.clone()
+    entire_X = torch.tensor(scaler.inverse_transform(entire_X.cpu().numpy())).cuda()
+    X_pert = torch.tensor(scaler.inverse_transform(X_pert.cpu().numpy())).cuda()
+    
     avg_L0_norm = torch.abs(entire_X - X_pert)
-    avg_L0_norm = torch.where(avg_L0_norm < 0.001, torch.tensor(0.0, device=device), avg_L0_norm)
+    avg_L0_norm = torch.where(avg_L0_norm < 0.1, torch.tensor(0.0, device=device), avg_L0_norm)
     avg_L0_norm = torch.norm(avg_L0_norm, p = 0)
 
 
-    print(f'The mean L0 norm for the perturbation is {avg_L0_norm}')
+    print(f'The number of non-zero elements for the perturbation is {avg_L0_norm} out of 800.')
     print('======================================================================')
-    return X_pert
+    return X_pert, X_pert_clone
 
 
 def SAIF(model,
@@ -100,21 +105,21 @@ def SAIF(model,
          loss_fn,
          device,
          num_epochs,
+         scaler,
          targeted = True,
-         k = 3,
+         k = 1,
          eps = 1.0):
-    """SAIF
+    """_summary_
 
     Args:
-        model (_type_): Model
-        X (_type_): Data to perturb
-        Y (_type_): Original labels 
-        loss_fn (_type_): Loss Function to be used
-        device (_type_): Device (cpu or cuda)
-        num_epochs (_type_): Number of epochs (or iterations)
-        targeted (bool, optional): If the attack is targeted. Defaults to True.
-        k (int, optional): Sparsity level. Defaults to 2.
-        eps (float, optional): Perturbation magnitude. Defaults to 1.0.
+        model (_type_): _description_
+        X (_type_): _description_
+        loss_fn (_type_): _description_
+        device (_type_): _description_
+        num_epochs (_type_): _description_
+        targeted (bool, optional): _description_. Defaults to True.
+        k (int, optional): _description_. Defaults to 3.
+        eps (float, optional): _description_. Defaults to 1.0.
 
     Returns:
         _type_: _description_
@@ -125,6 +130,8 @@ def SAIF(model,
     print('SAIF method')
 
     entire_X = X
+    
+    mask = torch.ones_like(entire_X)
 
     model.eval()
     for param in model.parameters():
@@ -150,14 +157,14 @@ def SAIF(model,
 
     r = 1
 
-    print(f'Performing attack on the dataset for {num_epochs} epochs')
+    print(f'Performing attack on the dataset for {num_epochs} epochs with eps {eps} and k {k}')
     epochs_bar = tqdm(range(num_epochs))
 
     for epoch in epochs_bar:
 
         s.requires_grad = True
         p.requires_grad = True
-        out = model(entire_X + s*p).squeeze()
+        out = model(entire_X + mask*s*p).squeeze()
 
         if targeted:
             loss = loss_fn(out,y_target)
@@ -184,14 +191,21 @@ def SAIF(model,
                 r += 1
                 mu = 1 / (2 ** r * math.sqrt(epoch + 1))
 
-            p = p + mu * (v - p)
-            s = s + mu * (z - s)
+            p = p + mask * mu * (v - p)
+            s = s + mask * mu * (z - s)
             
             X_adv = torch.clamp(entire_X + p, 0,1)
             p = X_adv - entire_X
             
+            succCfIndexes = model(entire_X + s*p).round().squeeze() == y_target
+            mask[succCfIndexes] = 0.0
+
         epochs_bar.set_postfix(loss = float(loss))
 
+        
+        if (epoch + 1) % 150 == 0:
+            k += 1
+        
     X_adv = entire_X + s*p
     X_adv = torch.where(X_adv > 1, torch.ones_like(X_adv), X_adv)
     X_adv = torch.where(X_adv < 0, torch.zeros_like(X_adv), X_adv)
@@ -200,15 +214,20 @@ def SAIF(model,
         X_adv_pred = torch.round(model(X_adv))
         print(f"Number of successful counterfactuals : {torch.sum(X_adv_pred.squeeze() == y_target)} / {entire_X.shape[0]}")
     
+    X_adv = X_adv.detach()
+    X_adv_clone = X_adv.clone()
+
+    entire_X = torch.tensor(scaler.inverse_transform(entire_X.cpu().numpy())).cuda()
+    X_adv = torch.tensor(scaler.inverse_transform(X_adv.cpu().numpy())).cuda()
+
     avg_L0_norm = torch.abs(entire_X - X_adv)
-    avg_L0_norm = torch.where(avg_L0_norm < 0.001, torch.tensor(0.0, device=device), avg_L0_norm)
+    avg_L0_norm = torch.where(avg_L0_norm < 0.1, torch.tensor(0.0, device=device), avg_L0_norm)
     avg_L0_norm = torch.norm(avg_L0_norm, p = 0) 
 
-    X_adv = X_adv.detach()
     
-    print(f'The number of non-zero elements for the perturbation is {avg_L0_norm}.')    
+    print(f'The number of non-zero elements for the perturbation is {avg_L0_norm} out of 800.')    
     print('======================================================================')
 
-    return X_adv   
+    return X_adv, X_adv_clone   
             
 # ==========================================================================================================================================================

@@ -117,8 +117,9 @@ def SAIF(model,
         loss_fn (_type_): _description_
         device (_type_): _description_
         num_epochs (_type_): _description_
+        scaler (_type_): _description_
         targeted (bool, optional): _description_. Defaults to True.
-        k (int, optional): _description_. Defaults to 3.
+        k (int, optional): _description_. Defaults to 1.
         eps (float, optional): _description_. Defaults to 1.0.
 
     Returns:
@@ -222,9 +223,8 @@ def SAIF(model,
 
     avg_L0_norm = torch.abs(entire_X - X_adv)
     avg_L0_norm = torch.where(avg_L0_norm < 0.1, torch.tensor(0.0, device=device), avg_L0_norm)
-    avg_L0_norm = torch.norm(avg_L0_norm, p = 0) 
+    avg_L0_norm = torch.norm(avg_L0_norm, p = 0)
 
-    
     print(f'The number of non-zero elements for the perturbation is {avg_L0_norm} out of 800.')    
     print('======================================================================')
 

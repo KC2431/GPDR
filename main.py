@@ -61,7 +61,8 @@ if __name__ == '__main__':
                                                              device=device,
                                                              lamb=0.6,
                                                              optim_lr=1e-2,
-                                                             num_iterates=201)    
+                                                             num_iterates=201,
+                                                             scaler=scaler)    
 
     NotInConvexHullData, InConvexHullData = convex_hull_proj(original_data_path=original_dataset,
                                                              adv_data=X_pert_L1_MAD,
@@ -72,4 +73,5 @@ if __name__ == '__main__':
                                                              device=device,
                                                              lamb=0.6,
                                                              optim_lr=1e-2,
-                                                             num_iterates=201)
+                                                             num_iterates=201,
+                                                             scaler=scaler)

@@ -24,7 +24,8 @@ def convex_hull_proj(
         device: str,
         lamb: float,
         optim_lr: float,
-        num_iterates: int
+        num_iterates: int,
+        scaler
         ):
     """covex_hull_proj
 
@@ -61,8 +62,7 @@ def convex_hull_proj(
     df = df[df[target_col] == 0]
     df = df[req_cols]
     
-    scaler = MinMaxScaler()
-    df = scaler.fit_transform(df.values)
+    df = scaler.transform(df.values)
 
     origSaif = saif.clone()
     saif_outcome_one  = saif
@@ -111,8 +111,8 @@ def convex_hull_proj(
 
     print(f"After the projection, number of points projected: {pointIsInConvexHull(hull, saif_outcome_one.cpu().numpy()).tolist().count(True)}/{saif_outcome_one.shape[0]}")
 
-    pert = np.abs(X.cpu().numpy() - saif_outcome_one.cpu().numpy())
-    pert = np.where(pert < 0.001, np.array(0.0), pert)
+    pert = np.abs(scaler.inverse_transform(X.cpu().numpy()) - scaler.inverse_transform(saif_outcome_one.cpu().numpy()))
+    pert = np.where(pert < 0.1, np.array(0.0), pert)
     print(f'The avg L0 norm after convex projection: {torch.norm(torch.tensor(pert),p=0)}')
 
     with torch.no_grad():

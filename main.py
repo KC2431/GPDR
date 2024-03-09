@@ -9,9 +9,10 @@ if __name__ == '__main__':
     original_dataset = 'German_credit_data.csv'
     select_features = True
 
+
     if original_dataset != 'diabetes.csv':
         model, X_test, selected_cols, scaler = get_trained_model(file_name=original_dataset,
-                               train=True,
+                               train=False,
                               dataset="german_credit_data",
                               select_features=select_features,
                               batch_size=32,
@@ -52,6 +53,8 @@ if __name__ == '__main__':
                                   model=model,
                                   scaler=scaler
                                   )
+
+
     NotInConvexHullData, InConvexHullData = convex_hull_proj(original_data_path=original_dataset,
                                                               adv_data=X_pert_SAIF,
                                                              trained_model=model,

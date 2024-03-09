@@ -1,4 +1,3 @@
-from imblearn.over_sampling import SMOTE
 import math
 import numpy as np
 import pandas as pd
@@ -106,7 +105,7 @@ def get_trained_model(file_name,
     
     if select_features:
         max_features = 8 
-        rfe = RFE(RandomForestClassifier(), n_features_to_select=max_features)
+        rfe = RFE(RandomForestClassifier(random_state=10), n_features_to_select=max_features)
         
         rfe.fit(X,Y)
         X = rfe.transform(X)
@@ -155,7 +154,6 @@ def get_trained_model(file_name,
                 train_loss.backward()
                 optimizer.step()
 
-
         model.eval()
 
         print('Testing the model now.')
@@ -169,10 +167,12 @@ def get_trained_model(file_name,
                                   y_test.cpu().numpy(),
                                   y_test_pred.view(X_test.shape[0]).cpu().numpy()
                                 )
+
             accu_score = accuracy_score(
                                         y_test.cpu().numpy(),
                                         y_test_pred.cpu().numpy()
                                       )
+
             print(f'The accuracy on test set is {accu_score*100:.2f}%')
 
         print(f"Saving model as {dataset}_trained_model.pt")

@@ -49,7 +49,6 @@ def L1_MAD_attack(X,
 
     adv_optimizer = torch.optim.Adam([X_pert],lr = optim_lr)
     
-    model.eval()
     for param in model.parameters():
         param.requires_grad = False
 
@@ -87,8 +86,8 @@ def L1_MAD_attack(X,
         print(f"Number of successful counterfactuals : {torch.sum(X_pert_pred.squeeze() == y_target)} / {entire_X.shape[0]}")
     
     X_pert_clone = X_pert.clone()
-    entire_X = torch.tensor(scaler.inverse_transform(entire_X.cpu().numpy())).cuda()
-    X_pert = torch.tensor(scaler.inverse_transform(X_pert.cpu().numpy())).cuda()
+    entire_X = torch.tensor(scaler.inverse_transform(entire_X.cpu().numpy())).to(device)
+    X_pert = torch.tensor(scaler.inverse_transform(X_pert.cpu().numpy())).to(device)
     
     avg_L0_norm = torch.abs(entire_X - X_pert)
     avg_L0_norm = torch.where(avg_L0_norm < 0.1, torch.tensor(0.0, device=device), avg_L0_norm)
@@ -97,6 +96,7 @@ def L1_MAD_attack(X,
 
     print(f'The number of non-zero elements for the perturbation is {avg_L0_norm} out of 800.')
     print('======================================================================')
+
     return X_pert, X_pert_clone
 
 
@@ -134,7 +134,6 @@ def SAIF(model,
     
     mask = torch.ones_like(entire_X)
 
-    model.eval()
     for param in model.parameters():
         param.requires_grad = False
 
@@ -218,8 +217,8 @@ def SAIF(model,
     X_adv = X_adv.detach()
     X_adv_clone = X_adv.clone()
 
-    entire_X = torch.tensor(scaler.inverse_transform(entire_X.cpu().numpy())).cuda()
-    X_adv = torch.tensor(scaler.inverse_transform(X_adv.cpu().numpy())).cuda()
+    entire_X = torch.tensor(scaler.inverse_transform(entire_X.cpu().numpy())).to(device)
+    X_adv = torch.tensor(scaler.inverse_transform(X_adv.cpu().numpy())).to(device)
 
     avg_L0_norm = torch.abs(entire_X - X_adv)
     avg_L0_norm = torch.where(avg_L0_norm < 0.1, torch.tensor(0.0, device=device), avg_L0_norm)
@@ -231,3 +230,4 @@ def SAIF(model,
     return X_adv, X_adv_clone   
             
 # ==========================================================================================================================================================
+

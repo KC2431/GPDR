@@ -46,10 +46,8 @@ def convex_hull_proj(
     print('======================================================================')
     print('Performing Convex Hull Projection')
 
-    from sklearn.preprocessing import MinMaxScaler
-
     model = trained_model
-    model.eval()
+    
     for param in model.parameters():
         param.requires_grad = False
 
@@ -99,7 +97,7 @@ def convex_hull_proj(
         points_optimizer.step()
             
         if epoch % 100 == 0:
-            print(f'Epoch {epoch}, Loss: {loss.item()}')
+            print(f'Epoch {epoch}, Loss: {loss.item():.2f}')
             NumPointsInHull = pointIsInConvexHull(hull, saifNotInConvexHull.detach().cpu().numpy())
             NumPointsInHull_true = NumPointsInHull.tolist().count(True)
             print(f'Total points projected into hull {NumPointsInHull_true}/{saifNotInConvexHull.shape[0]}')

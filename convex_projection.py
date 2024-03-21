@@ -57,6 +57,8 @@ def convex_hull_proj(
     req_cols = selected_cols
     target_col = df.columns[-1]
 
+    print(req_cols)
+
     df = df[df[target_col] == 0]
     df = df[req_cols]
     
@@ -66,7 +68,6 @@ def convex_hull_proj(
     saif_outcome_one  = saif
     
     hull = ConvexHull(df,qhull_options='Qx')
-
 
     if save_hull:
         pickle.dump(hull,open("convex.hull", "wb"))

@@ -188,9 +188,9 @@ def get_trained_model(file_name,
     
     print('======================================================================')
     
-    Y = np.reshape(Y, (-1,1))
-    X = torch.cat((X_train, X_test),dim = 0)
-    scaled_data = pd.DataFrame(np.concatenate((X.cpu().numpy(),Y),axis=1))
+    Y = torch.cat((y_train, y_test),dim=0).reshape(-1,1).cpu().numpy()
+    X = torch.cat((X_train, X_test),dim = 0).cpu().numpy()
+    scaled_data = pd.DataFrame(np.concatenate((X,Y),axis=1))
     X_sampled = scaled_data[scaled_data.iloc[:,-1] == 1].sample(n=100,random_state=22).iloc[:,:-1]
     X_sampled = torch.tensor(X_sampled.values, dtype=torch.float32,device=device)
     
@@ -239,6 +239,14 @@ class DenseModel(torch.nn.Module):
         return self.model(input)
 
 class CustomDataset(Dataset):
+    
+    """CustomDataset
+
+    Args:
+        X (torch.tensor): Features
+        Y (torch.tensor): Labels
+    """
+    
     def __init__(self, X, Y):
         
         self.X  = X

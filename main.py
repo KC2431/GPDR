@@ -16,8 +16,13 @@ if __name__ == '__main__':
                               dataset="german_credit_data",
                               select_features=select_features,
                               batch_size=32,
+<<<<<<< HEAD
                               shuffle=True,
                               train_test_ratio=0.25,
+=======
+                              shuffle=False,
+                              train_test_ratio=0.2,
+>>>>>>> 544666d97bae1791b7a2d1f2f3e216e98ff82d7f
                               num_epochs=500,
                               lr=1e-2,
                               weight_decay=1e-3,
@@ -37,7 +42,7 @@ if __name__ == '__main__':
 
 
     loss_fn = torch.nn.BCELoss()
-    X_pert_SAIF_scaled, X_pert_SAIF = SAIF(model = model,
+    X_pert_SAIF, X_pert_SAIF_scaled = SAIF(model = model,
                         X=X_test,
                        loss_fn=loss_fn,
                        device=device,
@@ -45,7 +50,7 @@ if __name__ == '__main__':
                        scaler=scaler
                        )
     
-    X_pert_L1_MAD_scaled, X_pert_L1_MAD  = L1_MAD_attack(X=X_test,
+    X_pert_L1_MAD, X_pert_L1_MAD_scaled  = L1_MAD_attack(X=X_test,
                                    device=device,
                                   lamb=1e-10,
                                   num_iters=num_epochs,
@@ -56,7 +61,7 @@ if __name__ == '__main__':
 
 
     NotInConvexHullData, InConvexHullData = convex_hull_proj(original_data_path=original_dataset,
-                                                              adv_data=X_pert_SAIF,
+                                                              adv_data=X_pert_SAIF_scaled,
                                                              trained_model=model,
                                                              selected_cols=selected_cols,
                                                              X=X_test,
@@ -68,7 +73,7 @@ if __name__ == '__main__':
                                                              scaler=scaler)    
 
     NotInConvexHullData, InConvexHullData = convex_hull_proj(original_data_path=original_dataset,
-                                                             adv_data=X_pert_L1_MAD,
+                                                             adv_data=X_pert_L1_MAD_scaled,
                                                              trained_model=model,
                                                              selected_cols=selected_cols,
                                                              X=X_test,

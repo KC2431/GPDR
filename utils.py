@@ -111,6 +111,7 @@ def get_trained_model(file_name,
         X = rfe.transform(X)
 
         columns_selected = data.iloc[:,:-1].columns[rfe.support_]
+        print(columns_selected)
     else:
         columns_selected = data.iloc[:,:-1].columns
 

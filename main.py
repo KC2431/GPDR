@@ -6,18 +6,18 @@ if __name__ == '__main__':
 
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     num_epochs = 500
-    original_dataset = 'German_credit_data.csv'
+    original_dataset = 'diabetes.csv'
     select_features = True
 
 
     if original_dataset != 'diabetes.csv':
         model, X_test, selected_cols, scaler = get_trained_model(file_name=original_dataset,
-                               train=False,
+                               train=True,
                               dataset="german_credit_data",
                               select_features=select_features,
                               batch_size=32,
-                              shuffle=False,
-                              train_test_ratio=0.20,
+                              shuffle=True,
+                              train_test_ratio=0.25,
                               num_epochs=500,
                               lr=1e-2,
                               weight_decay=1e-3,
